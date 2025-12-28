@@ -4,7 +4,8 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>重要用語クイズ（章別）</title>
+    <title>重要用語クイズ（カード式）</title>
+
     <style>
         body {
             font-family: system-ui, "Noto Sans JP", sans-serif;
@@ -44,7 +45,7 @@
             font-size: 12px;
         }
 
-        .term {
+        .pill {
             font-size: 12px;
             color: #374151;
             background: #f3f4f6;
@@ -57,6 +58,7 @@
             font-size: 18px;
             margin: 14px 0;
             line-height: 1.6;
+            white-space: pre-wrap;
         }
 
         .choice {
@@ -66,6 +68,7 @@
             cursor: pointer;
             background: #fff;
             margin-bottom: 8px;
+            white-space: pre-wrap;
         }
 
         .choice:hover {
@@ -111,39 +114,72 @@
         button.primary:hover {
             background: #000;
         }
+
+        .warn {
+            color: #b45309;
+        }
     </style>
 </head>
 
 <body>
     <main>
         <div class="card">
-            <h1>寝る前10分＆試験直前：重要用語 四択クイズ（章別）</h1>
+            <h1>寝る前10分＆試験直前：重要用語 四択クイズ（カード式）</h1>
 
             <div class="row" style="justify-content: space-between;">
                 <div class="row">
                     <label class="muted">章</label>
                     <select id="chapter">
+                        <option value="ch1" selected>1章</option>
                         <option value="ch2">2章</option>
                         <option value="ch3">3章</option>
                         <option value="ch4">4章</option>
+                        <option value="ch5">5章</option>
+                        <option value="ch6">6章</option>
+                        <option value="ch7">7章</option>
+                        <option value="ch8">8章</option>
+                        <option value="ch9">9章</option>
+                        <option value="ch10">10章</option>
+                        <option value="ch11">11章</option>
+                        <option value="ch12">12章</option>
+                        <option value="ch13">13章</option>
+                        <option value="ch14">14章</option>
+                        <option value="ch15">15章</option>
+                        <option value="ch16">16章</option>
+                        <option value="ch17">17章</option>
+                        <option value="ch18">18章</option>
+                        <option value="ch19">19章</option>
+                        <option value="ch20">20章</option>
+                        <option value="ch21">21章</option>
                     </select>
-                    <button id="apply">この章に切替</button>
+
+                    <label class="muted">出題</label>
+                    <select id="direction">
+                        <option value="forward">順引き（用語→定義）</option>
+                        <option value="reverse">逆引き（定義→用語）</option>
+                        <option value="mixed">ミックス</option>
+                    </select>
+
+                    <label class="muted">選択肢</label>
+                    <select id="choiceMode">
+                        <option value="def">定義で選ぶ</option>
+                        <option value="term">用語で選ぶ</option>
+                        <option value="auto" selected>自動（順=定義 / 逆=用語）</option>
+                    </select>
 
                     <button id="shuffle">シャッフル</button>
-
                     <button id="ngMode">NGのみ</button>
                     <button id="allMode">全問</button>
+
                     <span class="muted" id="modeLabel"></span>
+                    <span class="pill" id="metaPill"></span>
+                    <span class="muted warn" id="dataWarn"></span>
                 </div>
 
                 <div class="row">
                     <div class="muted" id="progress"></div>
                     <div class="muted" id="score"></div>
                 </div>
-            </div>
-
-            <div class="row" style="margin-top:10px;">
-                <span class="term" id="term"></span>
             </div>
 
             <div class="question" id="question"></div>
@@ -163,281 +199,31 @@
         </div>
     </main>
 
-    <script src="data-ch2.js"></script>
-    <script src="data-ch3.js"></script>
-    <script src="data-ch4.js"></script>
+    <!-- ===== カードデータ（章別）===== -->
+    <script src="./data/cards-ch1.js"></script>
+    <script src="./data/cards-ch2.js"></script>
+    <script src="./data/cards-ch3.js"></script>
+    <script src="./data/cards-ch4.js"></script>
+    <script src="./data/cards-ch5.js"></script>
+    <script src="./data/cards-ch6.js"></script>
+    <script src="./data/cards-ch7.js"></script>
+    <script src="./data/cards-ch8.js"></script>
+    <script src="./data/cards-ch9.js"></script>
+    <script src="./data/cards-ch10.js"></script>
+    <script src="./data/cards-ch11.js"></script>
+    <script src="./data/cards-ch12.js"></script>
+    <script src="./data/cards-ch13.js"></script>
+    <script src="./data/cards-ch14.js"></script>
+    <script src="./data/cards-ch15.js"></script>
+    <script src="./data/cards-ch16.js"></script>
+    <script src="./data/cards-ch17.js"></script>
+    <script src="./data/cards-ch18.js"></script>
+    <script src="./data/cards-ch19.js"></script>
+    <script src="./data/cards-ch20.js"></script>
+    <script src="./data/cards-ch21.js"></script>
 
-    <script>
-        const LS_KEY = "vocab_quiz_stats_by_ch_v2";
-        const LS_NG_KEY = "vocab_quiz_ng_by_ch_v2"; // 章別：間違えた問題
-
-        const chapters = {
-            ch2: { name: "2章", data: window.QUIZ_CH2 || [] },
-            ch3: { name: "3章", data: window.QUIZ_CH3 || [] },
-            ch4: { name: "4章", data: window.QUIZ_CH4 || [] },
-        };
-
-        let activeKey = "ch2";
-        let order = [];
-        let idx = 0;
-        let answered = false;
-
-        let stats = loadStats();
-        let ng = loadNg();
-        let isNgMode = false;
-
-        function loadStats() {
-            try {
-                const raw = localStorage.getItem(LS_KEY);
-                const base = raw ? JSON.parse(raw) : {};
-                for (const k of Object.keys(chapters)) base[k] ??= { correct: 0, total: 0 };
-                return base;
-            } catch {
-                const base = {};
-                for (const k of Object.keys(chapters)) base[k] = { correct: 0, total: 0 };
-                return base;
-            }
-        }
-        function saveStats() {
-            localStorage.setItem(LS_KEY, JSON.stringify(stats));
-        }
-
-        function loadNg() {
-            try {
-                const raw = localStorage.getItem(LS_NG_KEY);
-                const base = raw ? JSON.parse(raw) : {};
-                for (const k of Object.keys(chapters)) base[k] ??= {};
-                return base;
-            } catch {
-                const base = {};
-                for (const k of Object.keys(chapters)) base[k] = {};
-                return base;
-            }
-        }
-        function saveNg() {
-            localStorage.setItem(LS_NG_KEY, JSON.stringify(ng));
-        }
-
-        // 問題の一意ID（章 + 元の配列index）
-        function qid(chKey, originalIndex) {
-            return `${chKey}:${originalIndex}`;
-        }
-
-        // current order[idx] は「元の配列index」
-        function currentOriginalIndex() {
-            return order[idx];
-        }
-
-        function buildOrder() {
-            const data = chapters[activeKey].data;
-            const all = data.map((_, i) => i);
-
-            if (!isNgMode) {
-                order = all;
-                return;
-            }
-
-            // NGのみ
-            const ngMap = ng[activeKey] || {};
-            order = all.filter(i => ngMap[qid(activeKey, i)] === true);
-        }
-
-        function currentQ() {
-            const data = chapters[activeKey].data;
-            if (!data.length) return null;
-            if (!order.length) return null;
-            return data[order[idx]];
-        }
-
-        function render() {
-            const data = chapters[activeKey].data;
-
-            document.getElementById("explain").textContent = "";
-            document.getElementById("choices").innerHTML = "";
-            answered = false;
-
-            document.getElementById("modeLabel").textContent = isNgMode ? "（NGのみ復習）" : "（全問）";
-
-            if (!data.length) {
-                document.getElementById("term").textContent = "データなし";
-                document.getElementById("question").textContent = "この章のデータがありません。";
-                document.getElementById("progress").textContent = "";
-                document.getElementById("score").textContent = "";
-                return;
-            }
-
-            if (isNgMode && order.length === 0) {
-                document.getElementById("term").textContent = "NGなし";
-                document.getElementById("question").textContent = "この章の「間違えた問題」はありません。";
-                document.getElementById("progress").textContent = `${chapters[activeKey].name}：0 / 0`;
-                document.getElementById("score").textContent = "";
-                document.getElementById("choices").innerHTML = "";
-                document.getElementById("explain").textContent = "";
-                return;
-            }
-
-            const q = currentQ();
-            if (!q) {
-                document.getElementById("term").textContent = "—";
-                document.getElementById("question").textContent = "出題できる問題がありません。";
-                document.getElementById("progress").textContent = "";
-                document.getElementById("score").textContent = "";
-                return;
-            }
-
-            document.getElementById("term").textContent = q.term ? `用語：${q.term}` : "用語：—";
-            document.getElementById("question").textContent = q.question;
-            document.getElementById("progress").textContent = `${chapters[activeKey].name}：${idx + 1} / ${order.length}`;
-
-            const s = stats[activeKey];
-            const rate = s.total ? Math.round((s.correct / s.total) * 100) : 0;
-            document.getElementById("score").textContent = `正答率: ${rate}%（${s.correct}/${s.total}）`;
-
-            q.choices.forEach((text, i) => {
-                const div = document.createElement("div");
-                div.className = "choice";
-                div.textContent = text;
-                div.addEventListener("click", () => answer(i, div));
-                document.getElementById("choices").appendChild(div);
-            });
-        }
-
-        function answer(choiceIndex, clickedEl) {
-            if (answered) return;
-            answered = true;
-
-            const q = currentQ();
-            const all = document.querySelectorAll(".choice");
-
-            const s = stats[activeKey];
-            s.total++;
-
-            const originalIndex = currentOriginalIndex();
-            const id = qid(activeKey, originalIndex);
-            ng[activeKey] ||= {};
-
-            if (choiceIndex === q.answer) {
-                s.correct++;
-                clickedEl.classList.add("correct");
-
-                // 正解したらNG解除（NG復習が消化される）
-                if (ng[activeKey][id]) {
-                    delete ng[activeKey][id];
-                    saveNg();
-
-                    // NGモードなら order を再構築して次へ自然につなぐ
-                    if (isNgMode) {
-                        const wasLast = (idx === order.length - 1);
-                        buildOrder();
-
-                        if (order.length === 0) {
-                            idx = 0;
-                            saveStats();
-                            render();
-                            return;
-                        }
-
-                        // 消えた分、idx がはみ出さないように調整
-                        if (idx >= order.length) idx = order.length - 1;
-                        if (wasLast && idx < order.length - 1) idx = order.length - 1;
-                    }
-                } else {
-                    saveNg(); // 念のため
-                }
-
-            } else {
-                clickedEl.classList.add("wrong");
-                all[q.answer].classList.add("correct");
-
-                // 間違えたらNG登録
-                ng[activeKey][id] = true;
-                saveNg();
-            }
-
-            saveStats();
-
-            document.getElementById("explain").textContent = "解説: " + (q.explanation || "");
-
-            const rate = s.total ? Math.round((s.correct / s.total) * 100) : 0;
-            document.getElementById("score").textContent = `正答率: ${rate}%（${s.correct}/${s.total}）`;
-        }
-
-        function setChapter(key) {
-            activeKey = key;
-            idx = 0;
-            buildOrder();
-            render();
-        }
-
-        function next() {
-            if (!order.length) return;
-            if (idx < order.length - 1) {
-                idx++;
-                render();
-            } else {
-                alert("この章は全問終了です。");
-            }
-        }
-        function prev() {
-            if (!order.length) return;
-            if (idx > 0) {
-                idx--;
-                render();
-            }
-        }
-        function shuffle() {
-            if (!order.length) return;
-            for (let i = order.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [order[i], order[j]] = [order[j], order[i]];
-            }
-            idx = 0;
-            render();
-        }
-        function restart() {
-            idx = 0;
-            render();
-        }
-
-        function resetStats() {
-            if (!confirm("章ごとの成績とNG（間違えた問題）を全てリセットします。よろしいですか？")) return;
-
-            for (const k of Object.keys(stats)) stats[k] = { correct: 0, total: 0 };
-            for (const k of Object.keys(ng)) ng[k] = {};
-
-            saveStats();
-            saveNg();
-
-            isNgMode = false;
-            idx = 0;
-            buildOrder();
-            render();
-        }
-
-        document.getElementById("apply").addEventListener("click", () => setChapter(document.getElementById("chapter").value));
-        document.getElementById("shuffle").addEventListener("click", shuffle);
-        document.getElementById("next").addEventListener("click", next);
-        document.getElementById("prev").addEventListener("click", prev);
-        document.getElementById("restart").addEventListener("click", restart);
-        document.getElementById("resetStats").addEventListener("click", resetStats);
-
-        document.getElementById("ngMode").addEventListener("click", () => {
-            isNgMode = true;
-            idx = 0;
-            buildOrder();
-            render();
-        });
-        document.getElementById("allMode").addEventListener("click", () => {
-            isNgMode = false;
-            idx = 0;
-            buildOrder();
-            render();
-        });
-
-        // 初期化
-        buildOrder();
-        render();
-    </script>
+    <!-- ===== アプリ本体 ===== -->
+    <script src="./app.js"></script>
 </body>
 
 </html>
