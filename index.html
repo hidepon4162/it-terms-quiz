@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>重要用語クイズ（章別）</title>
+    <style>
+        body {
+            font-family: system-ui, "Noto Sans JP", sans-serif;
+            margin: 0;
+            background: #f6f7f9;
+            color: #111;
+        }
+
+        main {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 16px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+        }
+
+        h1 {
+            font-size: 18px;
+            margin: 0 0 8px;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .muted {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+        .term {
+            font-size: 12px;
+            color: #374151;
+            background: #f3f4f6;
+            padding: 4px 8px;
+            border-radius: 999px;
+            display: inline-block;
+        }
+
+        .question {
+            font-size: 18px;
+            margin: 14px 0;
+            line-height: 1.6;
+        }
+
+        .choice {
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 10px 12px;
+            cursor: pointer;
+            background: #fff;
+            margin-bottom: 8px;
+        }
+
+        .choice:hover {
+            background: #f3f4f6;
+        }
+
+        .choice.correct {
+            background: #dcfce7;
+            border-color: #22c55e;
+        }
+
+        .choice.wrong {
+            background: #fee2e2;
+            border-color: #ef4444;
+        }
+
+        .explain {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #e5e7eb;
+            white-space: pre-wrap;
+        }
+
+        button,
+        select {
+            border: 1px solid #d1d5db;
+            background: #fff;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #f3f4f6;
+        }
+
+        button.primary {
+            background: #111;
+            color: #fff;
+            border-color: #111;
+        }
+
+        button.primary:hover {
+            background: #000;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <div class="card">
+            <h1>寝る前10分＆試験直前：重要用語 四択クイズ（章別）</h1>
+
+            <div class="row" style="justify-content: space-between;">
+                <div class="row">
+                    <label class="muted">章</label>
+                    <select id="chapter">
+                        <option value="ch2">2章</option>
+                        <option value="ch3">3章</option>
+                        <option value="ch4">4章</option>
+                    </select>
+                    <button id="apply">この章に切替</button>
+
+                    <button id="shuffle">シャッフル</button>
+
+                    <button id="ngMode">NGのみ</button>
+                    <button id="allMode">全問</button>
+                    <span class="muted" id="modeLabel"></span>
+                </div>
+
+                <div class="row">
+                    <div class="muted" id="progress"></div>
+                    <div class="muted" id="score"></div>
+                </div>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+                <span class="term" id="term"></span>
+            </div>
+
+            <div class="question" id="question"></div>
+            <div id="choices"></div>
+            <div class="explain" id="explain"></div>
+
+            <div class="row" style="margin-top: 12px; justify-content: space-between;">
+                <div class="row">
+                    <button id="prev">戻る</button>
+                    <button class="primary" id="next">次へ</button>
+                </div>
+                <div class="row">
+                    <button id="restart">最初から</button>
+                    <button id="resetStats">成績リセット</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="data-ch2.js"></script>
+    <script src="data-ch3.js"></script>
+    <script src="data-ch4.js"></script>
+
+    <script>
+        const LS_KEY = "vocab_quiz_stats_by_ch_v2";
+        const LS_NG_KEY = "vocab_quiz_ng_by_ch_v2"; // 章別：間違えた問題
+
+        const chapters = {
+            ch2: { name: "2章", data: window.QUIZ_CH2 || [] },
+            ch3: { name: "3章", data: window.QUIZ_CH3 || [] },
+            ch4: { name: "4章", data: window.QUIZ_CH4 || [] },
+        };
+
+        let activeKey = "ch2";
+        let order = [];
+        let idx = 0;
+        let answered = false;
+
+        let stats = loadStats();
+        let ng = loadNg();
+        let isNgMode = false;
+
+        function loadStats() {
+            try {
+                const raw = localStorage.getItem(LS_KEY);
+                const base = raw ? JSON.parse(raw) : {};
+                for (const k of Object.keys(chapters)) base[k] ??= { correct: 0, total: 0 };
+                return base;
+            } catch {
+                const base = {};
+                for (const k of Object.keys(chapters)) base[k] = { correct: 0, total: 0 };
+                return base;
+            }
+        }
+        function saveStats() {
+            localStorage.setItem(LS_KEY, JSON.stringify(stats));
+        }
+
+        function loadNg() {
+            try {
+                const raw = localStorage.getItem(LS_NG_KEY);
+                const base = raw ? JSON.parse(raw) : {};
+                for (const k of Object.keys(chapters)) base[k] ??= {};
+                return base;
+            } catch {
+                const base = {};
+                for (const k of Object.keys(chapters)) base[k] = {};
+                return base;
+            }
+        }
+        function saveNg() {
+            localStorage.setItem(LS_NG_KEY, JSON.stringify(ng));
+        }
+
+        // 問題の一意ID（章 + 元の配列index）
+        function qid(chKey, originalIndex) {
+            return `${chKey}:${originalIndex}`;
+        }
+
+        // current order[idx] は「元の配列index」
+        function currentOriginalIndex() {
+            return order[idx];
+        }
+
+        function buildOrder() {
+            const data = chapters[activeKey].data;
+            const all = data.map((_, i) => i);
+
+            if (!isNgMode) {
+                order = all;
+                return;
+            }
+
+            // NGのみ
+            const ngMap = ng[activeKey] || {};
+            order = all.filter(i => ngMap[qid(activeKey, i)] === true);
+        }
+
+        function currentQ() {
+            const data = chapters[activeKey].data;
+            if (!data.length) return null;
+            if (!order.length) return null;
+            return data[order[idx]];
+        }
+
+        function render() {
+            const data = chapters[activeKey].data;
+
+            document.getElementById("explain").textContent = "";
+            document.getElementById("choices").innerHTML = "";
+            answered = false;
+
+            document.getElementById("modeLabel").textContent = isNgMode ? "（NGのみ復習）" : "（全問）";
+
+            if (!data.length) {
+                document.getElementById("term").textContent = "データなし";
+                document.getElementById("question").textContent = "この章のデータがありません。";
+                document.getElementById("progress").textContent = "";
+                document.getElementById("score").textContent = "";
+                return;
+            }
+
+            if (isNgMode && order.length === 0) {
+                document.getElementById("term").textContent = "NGなし";
+                document.getElementById("question").textContent = "この章の「間違えた問題」はありません。";
+                document.getElementById("progress").textContent = `${chapters[activeKey].name}：0 / 0`;
+                document.getElementById("score").textContent = "";
+                document.getElementById("choices").innerHTML = "";
+                document.getElementById("explain").textContent = "";
+                return;
+            }
+
+            const q = currentQ();
+            if (!q) {
+                document.getElementById("term").textContent = "—";
+                document.getElementById("question").textContent = "出題できる問題がありません。";
+                document.getElementById("progress").textContent = "";
+                document.getElementById("score").textContent = "";
+                return;
+            }
+
+            document.getElementById("term").textContent = q.term ? `用語：${q.term}` : "用語：—";
+            document.getElementById("question").textContent = q.question;
+            document.getElementById("progress").textContent = `${chapters[activeKey].name}：${idx + 1} / ${order.length}`;
+
+            const s = stats[activeKey];
+            const rate = s.total ? Math.round((s.correct / s.total) * 100) : 0;
+            document.getElementById("score").textContent = `正答率: ${rate}%（${s.correct}/${s.total}）`;
+
+            q.choices.forEach((text, i) => {
+                const div = document.createElement("div");
+                div.className = "choice";
+                div.textContent = text;
+                div.addEventListener("click", () => answer(i, div));
+                document.getElementById("choices").appendChild(div);
+            });
+        }
+
+        function answer(choiceIndex, clickedEl) {
+            if (answered) return;
+            answered = true;
+
+            const q = currentQ();
+            const all = document.querySelectorAll(".choice");
+
+            const s = stats[activeKey];
+            s.total++;
+
+            const originalIndex = currentOriginalIndex();
+            const id = qid(activeKey, originalIndex);
+            ng[activeKey] ||= {};
+
+            if (choiceIndex === q.answer) {
+                s.correct++;
+                clickedEl.classList.add("correct");
+
+                // 正解したらNG解除（NG復習が消化される）
+                if (ng[activeKey][id]) {
+                    delete ng[activeKey][id];
+                    saveNg();
+
+                    // NGモードなら order を再構築して次へ自然につなぐ
+                    if (isNgMode) {
+                        const wasLast = (idx === order.length - 1);
+                        buildOrder();
+
+                        if (order.length === 0) {
+                            idx = 0;
+                            saveStats();
+                            render();
+                            return;
+                        }
+
+                        // 消えた分、idx がはみ出さないように調整
+                        if (idx >= order.length) idx = order.length - 1;
+                        if (wasLast && idx < order.length - 1) idx = order.length - 1;
+                    }
+                } else {
+                    saveNg(); // 念のため
+                }
+
+            } else {
+                clickedEl.classList.add("wrong");
+                all[q.answer].classList.add("correct");
+
+                // 間違えたらNG登録
+                ng[activeKey][id] = true;
+                saveNg();
+            }
+
+            saveStats();
+
+            document.getElementById("explain").textContent = "解説: " + (q.explanation || "");
+
+            const rate = s.total ? Math.round((s.correct / s.total) * 100) : 0;
+            document.getElementById("score").textContent = `正答率: ${rate}%（${s.correct}/${s.total}）`;
+        }
+
+        function setChapter(key) {
+            activeKey = key;
+            idx = 0;
+            buildOrder();
+            render();
+        }
+
+        function next() {
+            if (!order.length) return;
+            if (idx < order.length - 1) {
+                idx++;
+                render();
+            } else {
+                alert("この章は全問終了です。");
+            }
+        }
+        function prev() {
+            if (!order.length) return;
+            if (idx > 0) {
+                idx--;
+                render();
+            }
+        }
+        function shuffle() {
+            if (!order.length) return;
+            for (let i = order.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [order[i], order[j]] = [order[j], order[i]];
+            }
+            idx = 0;
+            render();
+        }
+        function restart() {
+            idx = 0;
+            render();
+        }
+
+        function resetStats() {
+            if (!confirm("章ごとの成績とNG（間違えた問題）を全てリセットします。よろしいですか？")) return;
+
+            for (const k of Object.keys(stats)) stats[k] = { correct: 0, total: 0 };
+            for (const k of Object.keys(ng)) ng[k] = {};
+
+            saveStats();
+            saveNg();
+
+            isNgMode = false;
+            idx = 0;
+            buildOrder();
+            render();
+        }
+
+        document.getElementById("apply").addEventListener("click", () => setChapter(document.getElementById("chapter").value));
+        document.getElementById("shuffle").addEventListener("click", shuffle);
+        document.getElementById("next").addEventListener("click", next);
+        document.getElementById("prev").addEventListener("click", prev);
+        document.getElementById("restart").addEventListener("click", restart);
+        document.getElementById("resetStats").addEventListener("click", resetStats);
+
+        document.getElementById("ngMode").addEventListener("click", () => {
+            isNgMode = true;
+            idx = 0;
+            buildOrder();
+            render();
+        });
+        document.getElementById("allMode").addEventListener("click", () => {
+            isNgMode = false;
+            idx = 0;
+            buildOrder();
+            render();
+        });
+
+        // 初期化
+        buildOrder();
+        render();
+    </script>
+</body>
+
+</html>
