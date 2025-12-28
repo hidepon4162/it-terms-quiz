@@ -7,6 +7,9 @@
     const LS_DIR = "vocab_card_quiz_direction_v1";
     const LS_CHOICE_MODE = "vocab_card_quiz_choice_mode_v1";
 
+    // ★追加：前回選んだ章
+    const LS_ACTIVE_CHAPTER = "vocab_card_quiz_active_chapter_v1";
+
     // ===== カードデータ（章別）=====
     // ※ index.html の <option value="chX"> と完全一致させる
     const chapters = {
@@ -34,7 +37,9 @@
     };
 
     // ===== 状態 =====
-    let activeKey = "ch1";
+    // ★変更：前回選択があればそれを使う（無ければ ch1）
+    let activeKey = loadActiveChapter() || "ch1";
+
     let direction = loadDirection();        // forward / reverse / mixed
     let choiceMode = loadChoiceMode();      // auto / term / def
     let isNgMode = false;
@@ -107,6 +112,16 @@
     }
     function saveChoiceMode() {
         localStorage.setItem(LS_CHOICE_MODE, choiceMode);
+    }
+
+    // ★追加：前回選択の章を読む（不正なら null）
+    function loadActiveChapter() {
+        const v = localStorage.getItem(LS_ACTIVE_CHAPTER);
+        return (v && chapters[v]) ? v : null;
+    }
+    // ★追加：章を保存
+    function saveActiveChapter(key) {
+        localStorage.setItem(LS_ACTIVE_CHAPTER, key);
     }
 
     function loadStats() {
@@ -404,6 +419,10 @@
         }
 
         activeKey = key;
+
+        // ★追加：章キーを保存（次回復元用）
+        saveActiveChapter(key);
+
         idx = 0;
         buildQuestions();
         buildOrder();
@@ -499,12 +518,10 @@
     $resetStats.addEventListener("click", resetAllStats);
 
     // ===== 初期化 =====
-    // index.html の selected と合わせるならここを "ch2" のままでOK
-    $chapter.value = activeKey;
     $direction.value = direction;
     $choiceMode.value = choiceMode;
 
-    buildQuestions();
-    buildOrder();
-    render();
+    // ★重要：activeKey（保存値）で UI と内部状態を確実に同期
+    $chapter.value = chapters[activeKey] ? activeKey : "ch1";
+    setChapter($chapter.value); // buildQuestions/buildOrder/render もここで実行される
 })();
