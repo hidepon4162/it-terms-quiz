@@ -54,6 +54,10 @@
             display: inline-block;
         }
 
+        .warn {
+            color: #b45309;
+        }
+
         .question {
             font-size: 18px;
             margin: 14px 0;
@@ -85,13 +89,6 @@
             border-color: #ef4444;
         }
 
-        .explain {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px dashed #e5e7eb;
-            white-space: pre-wrap;
-        }
-
         button,
         select {
             border: 1px solid #d1d5db;
@@ -115,22 +112,107 @@
             background: #000;
         }
 
-        .warn {
-            color: #b45309;
+        /* ===== 解説UI（完成形）===== */
+        .explainCard {
+            margin-top: 10px;
+            border-top: 1px dashed #e5e7eb;
+            padding-top: 10px;
         }
-    
-        /* ===== 追加：履歴/CSV/グラフ ===== */
-        .modal[hidden] { display: none; }
+
+        .explainHeader {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .toggle {
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            user-select: none;
+            font-size: 12px;
+            color: #374151;
+            background: #f3f4f6;
+            border-radius: 999px;
+            padding: 6px 10px;
+            cursor: pointer;
+            border: 1px solid #e5e7eb;
+        }
+
+        .toggle input {
+            accent-color: #111;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .tabBtn {
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid #d1d5db;
+            background: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            color: #374151;
+        }
+
+        .tabBtn.active {
+            background: #111;
+            border-color: #111;
+            color: #fff;
+        }
+
+        .tabPanel {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            background: #fafafa;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
+        .tabPanel[hidden] {
+            display: none;
+        }
+
+        .foldBody[hidden] {
+            display: none;
+        }
+
+        /* ===== 下部操作列：常に最前面 & クリック奪われ防止 ===== */
+        .actions {
+            margin-top: 12px;
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* ===== モーダル ===== */
+        .modal[hidden] {
+            display: none;
+        }
+
         .modal {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,.35);
+            background: rgba(0, 0, 0, .35);
             display: flex;
             align-items: center;
             justify-content: center;
             padding: 16px;
             z-index: 50;
         }
+
         .modal .panel {
             width: min(980px, 100%);
             max-height: 80vh;
@@ -138,29 +220,41 @@
             background: #fff;
             border: 1px solid #e5e7eb;
             border-radius: 14px;
-            box-shadow: 0 10px 30px rgba(0,0,0,.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .15);
             padding: 14px;
         }
+
         .modal h2 {
             font-size: 16px;
             margin: 0 0 10px;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             font-size: 12px;
         }
-        th, td {
+
+        th,
+        td {
             border-bottom: 1px solid #e5e7eb;
             padding: 8px 6px;
             vertical-align: top;
             text-align: left;
             white-space: nowrap;
         }
-        td.wrap { white-space: normal; }
-        .panel .row { margin-bottom: 10px; }
-        canvas { width: 100%; height: 320px; border: 1px solid #e5e7eb; border-radius: 12px; }
 
+        td.wrap {
+            white-space: normal;
+        }
+
+        canvas {
+            width: 100%;
+            height: 320px;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            background: #fff;
+        }
     </style>
 </head>
 
@@ -173,7 +267,7 @@
                 <div class="row">
                     <label class="muted">章</label>
                     <select id="chapter">
-                        <option value="ch1"selected>1章</option>
+                        <option value="ch1" selected>1章</option>
                         <option value="ch2">2章</option>
                         <option value="ch3">3章</option>
                         <option value="ch4">4章</option>
@@ -227,9 +321,42 @@
 
             <div class="question" id="question"></div>
             <div id="choices"></div>
-            <div class="explain" id="explain"></div>
 
-            <div class="row" style="margin-top: 12px; justify-content: space-between;">
+            <!-- 解説（回答後に出る） -->
+            <div class="explainCard" id="explainCard" hidden>
+                <div class="explainHeader">
+                    <div class="row">
+                        <span class="pill">解説</span>
+                        <span class="muted" id="explainSummary"></span>
+                    </div>
+
+                    <label class="toggle" title="ONにすると追加解説を折りたたみます（試験直前向け）">
+                        <input type="checkbox" id="cramMode" />
+                        試験直前モード（追加解説を折りたたむ）
+                    </label>
+                </div>
+
+                <!-- 基本（定義） -->
+                <div class="tabPanel" id="panelBasic"></div>
+
+                <!-- 追加解説：折りたたみ対象 -->
+                <div class="foldBody" id="extraBody">
+                    <div class="tabs" role="tablist" aria-label="追加解説タブ">
+                        <button class="tabBtn active" data-tab="example" type="button">例</button>
+                        <button class="tabBtn" data-tab="point" type="button">ポイント</button>
+                        <button class="tabBtn" data-tab="memory" type="button">暗記</button>
+                        <button class="tabBtn" data-tab="trap" type="button">ひっかけ</button>
+                    </div>
+
+                    <div class="tabPanel" id="panelExample"></div>
+                    <div class="tabPanel" id="panelPoint" hidden></div>
+                    <div class="tabPanel" id="panelMemory" hidden></div>
+                    <div class="tabPanel" id="panelTrap" hidden></div>
+                </div>
+            </div>
+
+            <!-- 下部操作（常にクリック可能） -->
+            <div class="actions">
                 <div class="row">
                     <button id="prev">戻る</button>
                     <button class="primary" id="next">次へ</button>
@@ -237,21 +364,22 @@
                 <div class="row">
                     <button id="restart">最初から</button>
                     <button id="resetStats">成績リセット</button>
-                <button id="history">履歴を見る</button>
+                    <button id="history">履歴を見る</button>
                     <button id="exportCsv">CSV出力</button>
                     <button id="showGraph">グラフ</button>
-</div>
+                </div>
             </div>
         </div>
-    
-        <!-- ===== 追加：履歴モーダル ===== -->
+
+        <!-- ===== 履歴モーダル ===== -->
         <div class="modal" id="historyModal" hidden>
             <div class="panel">
                 <div class="row" style="justify-content: space-between;">
                     <h2>成績履歴（最新10件）</h2>
-                    <button id="closeHistory">閉じる</button>
+                    <button id="closeHistory" type="button">閉じる</button>
                 </div>
                 <div class="muted" id="historyHint"></div>
+
                 <div style="margin-top:10px;">
                     <table>
                         <thead>
@@ -264,7 +392,7 @@
                                 <th>正答</th>
                                 <th>総数</th>
                                 <th>正答率</th>
-                                <th class="wrap">理由</th>
+                                <th class="wrap">メモ</th>
                             </tr>
                         </thead>
                         <tbody id="historyBody"></tbody>
@@ -273,12 +401,12 @@
             </div>
         </div>
 
-        <!-- ===== 追加：グラフモーダル ===== -->
+        <!-- ===== グラフモーダル ===== -->
         <div class="modal" id="graphModal" hidden>
             <div class="panel">
                 <div class="row" style="justify-content: space-between;">
                     <h2>章ごとの平均正答率 推移（セッション別）</h2>
-                    <button id="closeGraph">閉じる</button>
+                    <button id="closeGraph" type="button">閉じる</button>
                 </div>
 
                 <div class="row">
