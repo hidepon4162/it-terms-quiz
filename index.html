@@ -66,6 +66,32 @@
         color: var(--text);
       }
 
+      /* ボタンの基本スタイル（既存） */
+      select,
+      .btn {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--text);
+      }
+
+      /* ★ここを追加してください★ */
+      .btn:hover {
+        background: #f1f5f9; /* 背景を少しグレーに */
+        border-color: var(--primary); /* 枠線を青に */
+        transform: translateY(-2px); /* 2ピクセル上に浮かせる */
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* 影を強くして浮遊感を出す */
+      }
+
+      /* クリックした時の反応 */
+      .btn:active {
+        transform: translateY(0);
+      }
+
       .btn-primary {
         background: var(--primary);
         color: white;
@@ -74,8 +100,9 @@
       }
 
       .btn-primary:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
+        background: #2563eb; /* 少し濃い青にして白文字を際立たせる */
+        color: #ffffff; /* 文字色は白を維持 */
+        border-color: #1d4ed8;
       }
 
       .btn-danger {
@@ -378,7 +405,7 @@
       </div>
     </main>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 
     <script src="./data/cards-ch1.js"></script>
     <script src="./data/cards-ch2.js"></script>
