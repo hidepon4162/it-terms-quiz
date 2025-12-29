@@ -63,7 +63,6 @@
     const q = state.questions[state.idx];
     $("question").textContent = q.prompt;
 
-    // 進捗表示の更新
     const progPercent = ((state.idx + 1) / state.questions.length) * 100;
     const rate = state.session.total === 0 ? 0 : Math.round((state.session.correct / state.session.total) * 100);
 
@@ -88,7 +87,6 @@
           if (c.textContent === q.correct) c.classList.add("correct");
         });
 
-        // 成績保存
         updateStats(q.id, isOk);
         showExplanation(q.card);
         saveHistory();
@@ -97,18 +95,27 @@
     });
   };
 
+  // --- 解説表示（ここを修正しました） ---
   const showExplanation = (card) => {
     const ex = parseExtra(card.extraExplain);
     $("explainArea").style.display = "block";
 
-    const setTab = (k) => $("tabBody").innerHTML = (ex[k] || "データがありません").replace(/\n/g, "<br>");
-    setTab("point"); // 初期タブ
+    // 表示を更新する共通関数
+    const updateContent = (key) => {
+      $("tabBody").innerHTML = (ex[key] || "データがありません").replace(/\n/g, "<br>");
+    };
 
+    // 現在「active」クラスがついているボタンを探して、そのデータキーで初期表示する
+    const currentActiveBtn = $("explainArea").querySelector(".tab-btn.active");
+    const currentKey = currentActiveBtn ? currentActiveBtn.dataset.k : "point";
+    updateContent(currentKey);
+
+    // タブクリック時のイベント登録
     $("explainArea").querySelectorAll(".tab-btn").forEach(btn => {
       btn.onclick = () => {
         $("explainArea").querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        setTab(btn.dataset.k);
+        updateContent(btn.dataset.k);
       };
     });
   };
@@ -161,14 +168,12 @@
   $("nextBtn").onclick = () => { if (state.idx < state.questions.length - 1) { state.idx++; render(); } };
   $("prevBtn").onclick = () => { if (state.idx > 0) { state.idx--; render(); } };
 
-  // 履歴表示
   $("showHistoryBtn").onclick = () => {
     const hist = JSON.parse(localStorage.getItem(KEYS.HIST) || "[]");
     $("historyBody").innerHTML = hist.map(h => `<tr><td>${h.d}</td><td>${h.ch}</td><td>${h.s}</td><td>${h.r}</td></tr>`).join("");
     $("historyModal").style.display = "flex";
   };
 
-  // グラフ表示
   $("showGraphBtn").onclick = () => {
     $("graphModal").style.display = "flex";
     const stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
@@ -187,7 +192,6 @@
     });
   };
 
-  // CSV出力
   $("exportCsvBtn").onclick = () => {
     const stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
     let csv = "\uFEFFid,章,用語,正解数\n";
@@ -210,7 +214,6 @@
     $("graphModal").style.display = "none";
   });
 
-  // --- 起動 ---
   Object.keys(chapters).forEach(k => {
     const o = document.createElement("option"); o.value = k; o.textContent = chapters[k].name;
     $("chapterSelect").appendChild(o);
