@@ -1,14 +1,13 @@
 (function () {
   "use strict";
 
-  // --- 設定 ---
   const KEYS = { CH: "v_ch", DIR: "v_dir", HIST: "v_hist", STATS: "v_stats" };
 
-  // --- データ準備 ---
+  // --- 1. データ準備（21章までループで確認） ---
   const chapters = {};
   for (let i = 1; i <= 21; i++) {
     const varName = `CARDS_CH${i}`;
-    if (window[varName]) {
+    if (window[varName] && window[varName].length > 0) {
       chapters[`ch${i}`] = { name: `${i}章`, cards: window[varName] };
     }
   }
@@ -24,10 +23,20 @@
 
   const $ = (id) => document.getElementById(id);
 
-  // --- クイズの初期化 ---
+  // --- 2. クイズの初期化 ---
   const initQuiz = () => {
     const ch = chapters[state.activeKey];
-    if (!ch) return;
+    if (!ch) {
+      // 指定した章がない場合は最初の章へ
+      const firstKey = Object.keys(chapters)[0];
+      if (firstKey) {
+        state.activeKey = firstKey;
+        initQuiz();
+      } else {
+        $("question").textContent = "データが読み込まれていません。";
+      }
+      return;
+    }
 
     state.questions = ch.cards.map(card => {
       const isFwd = state.direction === "forward";
@@ -49,23 +58,20 @@
     render();
   };
 
-  // --- クイズの描画 ---
+  // --- 3. 描画処理 ---
   const render = () => {
     state.answered = false;
     $("explainArea").style.display = "none";
     $("choices").innerHTML = "";
 
-    if (state.questions.length === 0) {
-      $("question").textContent = "問題データがありません。";
-      return;
-    }
+    if (state.questions.length === 0) return;
 
     const q = state.questions[state.idx];
     $("question").textContent = q.prompt;
 
+    // 進捗更新
     const progPercent = ((state.idx + 1) / state.questions.length) * 100;
     const rate = state.session.total === 0 ? 0 : Math.round((state.session.correct / state.session.total) * 100);
-
     $("progressFill").style.width = `${progPercent}%`;
     $("progressLabel").textContent = `${state.idx + 1} / ${state.questions.length}`;
     $("scoreLabel").textContent = `正解: ${state.session.correct} / ${state.session.total} (${rate}%)`;
@@ -78,7 +84,6 @@
         if (state.answered) return;
         state.answered = true;
         const isOk = (txt === q.correct);
-
         state.session.total++;
         if (isOk) state.session.correct++;
 
@@ -95,27 +100,25 @@
     });
   };
 
-  // --- 解説表示（ここを修正しました） ---
+  // --- 4. 解説表示（タブ同期修正済み） ---
   const showExplanation = (card) => {
     const ex = parseExtra(card.extraExplain);
     $("explainArea").style.display = "block";
 
-    // 表示を更新する共通関数
-    const updateContent = (key) => {
+    const updateTabContent = (key) => {
       $("tabBody").innerHTML = (ex[key] || "データがありません").replace(/\n/g, "<br>");
     };
 
-    // 現在「active」クラスがついているボタンを探して、そのデータキーで初期表示する
-    const currentActiveBtn = $("explainArea").querySelector(".tab-btn.active");
-    const currentKey = currentActiveBtn ? currentActiveBtn.dataset.k : "point";
-    updateContent(currentKey);
+    // 前回選択されていたタブのキーを取得
+    const activeBtn = $("explainArea").querySelector(".tab-btn.active");
+    const currentKey = activeBtn ? activeBtn.dataset.k : "point";
+    updateTabContent(currentKey);
 
-    // タブクリック時のイベント登録
     $("explainArea").querySelectorAll(".tab-btn").forEach(btn => {
       btn.onclick = () => {
         $("explainArea").querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        updateContent(btn.dataset.k);
+        updateTabContent(btn.dataset.k);
       };
     });
   };
@@ -132,6 +135,7 @@
     return res;
   };
 
+  // --- 5. データ保存 & モーダル ---
   const updateStats = (id, isOk) => {
     let stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
     stats[id] = stats[id] || { c: 0, w: 0 };
@@ -141,29 +145,20 @@
 
   const saveHistory = () => {
     let hist = JSON.parse(localStorage.getItem(KEYS.HIST) || "[]");
-    const rate = Math.round((state.session.correct / state.session.total) * 100) + "%";
     const entry = {
       d: new Date().toLocaleString(),
       ch: chapters[state.activeKey].name,
       s: `${state.session.correct}/${state.session.total}`,
-      r: rate
+      r: Math.round((state.session.correct / state.session.total) * 100) + "%"
     };
     if (hist.length > 0 && hist[0].ch === entry.ch && state.session.total > 1) hist[0] = entry;
     else hist.unshift(entry);
     localStorage.setItem(KEYS.HIST, JSON.stringify(hist.slice(0, 10)));
   };
 
-  // --- イベント登録 ---
-  $("chapterSelect").onchange = (e) => {
-    state.activeKey = e.target.value;
-    localStorage.setItem(KEYS.CH, e.target.value);
-    initQuiz();
-  };
-  $("directionSelect").onchange = (e) => {
-    state.direction = e.target.value;
-    localStorage.setItem(KEYS.DIR, e.target.value);
-    initQuiz();
-  };
+  // イベント登録
+  $("chapterSelect").onchange = (e) => { state.activeKey = e.target.value; localStorage.setItem(KEYS.CH, e.target.value); initQuiz(); };
+  $("directionSelect").onchange = (e) => { state.direction = e.target.value; localStorage.setItem(KEYS.DIR, e.target.value); initQuiz(); };
   $("shuffleBtn").onclick = () => { state.questions.sort(() => Math.random() - 0.5); render(); };
   $("nextBtn").onclick = () => { if (state.idx < state.questions.length - 1) { state.idx++; render(); } };
   $("prevBtn").onclick = () => { if (state.idx > 0) { state.idx--; render(); } };
@@ -174,46 +169,75 @@
     $("historyModal").style.display = "flex";
   };
 
+  // グラフ表示（案C：積み上げスタックグラフ版）
   $("showGraphBtn").onclick = () => {
     $("graphModal").style.display = "flex";
     const stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
+
     const labels = Object.keys(chapters).map(k => chapters[k].name);
-    const data = Object.keys(chapters).map(k => chapters[k].cards.filter(c => stats[c.id]?.c > 0).length);
+
+    // 4つのステータスに分類
+    const dataMaster = []; // 完璧
+    const dataLearning = []; // あと一歩
+    const dataBad = []; // 苦手
+    const dataNone = []; // 未着手
+
+    Object.keys(chapters).forEach(k => {
+      let master = 0, learning = 0, bad = 0, none = 0;
+
+      chapters[k].cards.forEach(c => {
+        const s = stats[c.id];
+        if (!s || (s.c === 0 && s.w === 0)) {
+          none++;
+        } else if (s.w > s.c) {
+          bad++; // 間違えた回数の方が多い
+        } else if (s.c >= 2) {
+          master++; // 2回以上正解して安定している
+        } else {
+          learning++; // 1回正解、または正解・不正解が同程度
+        }
+      });
+
+      dataMaster.push(master);
+      dataLearning.push(learning);
+      dataBad.push(bad);
+      dataNone.push(none);
+    });
 
     if (window.chartInstance) window.chartInstance.destroy();
     const ctx = $("rateChart").getContext("2d");
     window.chartInstance = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels,
-        datasets: [{ label: '習得済用語数', data, backgroundColor: '#3b82f6', borderRadius: 6 }]
+        labels: labels,
+        datasets: [
+          { label: 'マスター (2回以上正解)', data: dataMaster, backgroundColor: '#3b82f6' }, // 青
+          { label: '学習中 (1回正解)', data: dataLearning, backgroundColor: '#fbbf24' }, // 黄
+          { label: '苦手 (不正解多め)', data: dataBad, backgroundColor: '#ef4444' }, // 赤
+          { label: '未着手', data: dataNone, backgroundColor: '#e2e8f0' } // グレー
+        ]
       },
-      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true }, // 積み上げ設定
+          y: { stacked: true, beginAtZero: true }
+        },
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+        }
+      }
     });
   };
-
-  $("exportCsvBtn").onclick = () => {
-    const stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
-    let csv = "\uFEFFid,章,用語,正解数\n";
-    Object.values(chapters).forEach(ch => {
-      ch.cards.forEach(c => {
-        csv += `${c.id},${ch.name},"${c.term}",${stats[c.id]?.c || 0}\n`;
-      });
-    });
-    const blob = new Blob([csv], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `grade_report_${new Date().toLocaleDateString()}.csv`;
-    a.click();
-  };
-
-  $("resetStatsBtn").onclick = () => { if (confirm("全成績と履歴を削除しますか？")) { localStorage.clear(); location.reload(); } };
 
   document.querySelectorAll(".close-btn").forEach(b => b.onclick = () => {
     $("historyModal").style.display = "none";
     $("graphModal").style.display = "none";
   });
 
+  // --- 6. 起動処理 ---
+  // セレクトボックスに読み込まれた全章を追加
   Object.keys(chapters).forEach(k => {
     const o = document.createElement("option"); o.value = k; o.textContent = chapters[k].name;
     $("chapterSelect").appendChild(o);

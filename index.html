@@ -1,366 +1,406 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
-
-<head>
+  <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>重要用語クイズマスター</title>
     <style>
-        :root {
-            --primary: #3b82f6;
-            --bg: #f8fafc;
-            --card: #ffffff;
-            --text: #1e293b;
-            --border: #e2e8f0;
-        }
+      :root {
+        --primary: #3b82f6;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --text: #1e293b;
+        --border: #e2e8f0;
+      }
 
-        body {
-            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            margin: 0;
-            line-height: 1.6;
-        }
+      body {
+        font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN",
+          "Hiragino Sans", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        margin: 0;
+        line-height: 1.6;
+      }
 
-        main {
-            max-width: 850px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+      main {
+        max-width: 850px;
+        margin: 0 auto;
+        padding: 20px;
+      }
 
-        /* Layout & Header */
-        .header-card {
-            background: var(--card);
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            margin-bottom: 24px;
-            border: 1px solid var(--border);
-        }
+      /* Layout & Header */
+      .header-card {
+        background: var(--card);
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        margin-bottom: 24px;
+        border: 1px solid var(--border);
+      }
 
-        .title {
-            font-size: 24px;
-            font-weight: 800;
-            margin: 0 0 16px;
-            color: var(--primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
+      .title {
+        font-size: 24px;
+        font-weight: 800;
+        margin: 0 0 16px;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
 
-        .control-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 12px;
-        }
+      .control-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+      }
 
-        select,
-        .btn {
-            padding: 10px 14px;
-            border-radius: 10px;
-            border: 1px solid var(--border);
-            background: #fff;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.2s;
-            color: var(--text);
-        }
+      select,
+      .btn {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: var(--text);
+      }
 
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-            border: none;
-            font-weight: 600;
-        }
+      .btn-primary {
+        background: var(--primary);
+        color: white;
+        border: none;
+        font-weight: 600;
+      }
 
-        .btn-primary:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
 
-        .btn-danger {
-            color: #ef4444;
-            border-color: #fecaca;
-        }
+      .btn-danger {
+        color: #ef4444;
+        border-color: #fecaca;
+      }
 
-        /* Quiz Area */
-        .quiz-card {
-            background: var(--card);
-            border-radius: 20px;
-            padding: 32px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            min-height: 450px;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid var(--border);
-        }
+      /* Quiz Area */
+      .quiz-card {
+        background: var(--card);
+        border-radius: 20px;
+        padding: 32px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        min-height: 450px;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border);
+      }
 
-        .progress-container {
-            margin-bottom: 24px;
-        }
+      .progress-container {
+        margin-bottom: 24px;
+      }
 
-        .progress-bar {
-            height: 10px;
-            background: var(--border);
-            border-radius: 5px;
-            overflow: hidden;
-        }
+      .progress-bar {
+        height: 10px;
+        background: var(--border);
+        border-radius: 5px;
+        overflow: hidden;
+      }
 
-        #progressFill {
-            height: 100%;
-            background: var(--primary);
-            width: 0%;
-            transition: width 0.4s ease;
-        }
+      #progressFill {
+        height: 100%;
+        background: var(--primary);
+        width: 0%;
+        transition: width 0.4s ease;
+      }
 
-        .stats-text {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            font-weight: 600;
-            color: #64748b;
-            margin-top: 8px;
-        }
+      .stats-text {
+        display: flex;
+        justify-content: space-between;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        margin-top: 8px;
+      }
 
-        #question {
-            font-size: 26px;
-            font-weight: 700;
-            margin: 20px 0 32px;
-            text-align: center;
-            color: #0f172a;
-            min-height: 1.5em;
-        }
+      #question {
+        font-size: 26px;
+        font-weight: 700;
+        margin: 20px 0 32px;
+        text-align: center;
+        color: #0f172a;
+        min-height: 1.5em;
+      }
 
-        #choices {
-            display: grid;
-            gap: 14px;
-        }
+      #choices {
+        display: grid;
+        gap: 14px;
+      }
 
-        .choice {
-            padding: 18px 24px;
-            border: 2px solid var(--border);
-            border-radius: 14px;
-            font-weight: 500;
-            transition: all 0.2s;
-            background: #fff;
-            cursor: pointer;
-        }
+      .choice {
+        padding: 18px 24px;
+        border: 2px solid var(--border);
+        border-radius: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        background: #fff;
+        cursor: pointer;
+      }
 
-        .choice:hover {
-            border-color: var(--primary);
-            background: #eff6ff;
-        }
+      .choice:hover {
+        border-color: var(--primary);
+        background: #eff6ff;
+      }
 
-        .choice.correct {
-            background: #dcfce7;
-            border-color: #22c55e;
-            color: #166534;
-            pointer-events: none;
-        }
+      .choice.correct {
+        background: #dcfce7;
+        border-color: #22c55e;
+        color: #166534;
+        pointer-events: none;
+      }
 
-        .choice.wrong {
-            background: #fee2e2;
-            border-color: #ef4444;
-            color: #991b1b;
-            pointer-events: none;
-        }
+      .choice.wrong {
+        background: #fee2e2;
+        border-color: #ef4444;
+        color: #991b1b;
+        pointer-events: none;
+      }
 
-        /* Explanation Tabs */
-        #explainArea {
-            margin-top: 28px;
-            border-top: 2px solid var(--border);
-            padding-top: 24px;
-        }
+      /* Explanation Tabs */
+      #explainArea {
+        margin-top: 28px;
+        border-top: 2px solid var(--border);
+        padding-top: 24px;
+      }
 
-        .tab-nav {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 16px;
-            background: #f1f5f9;
-            padding: 4px;
-            border-radius: 10px;
-        }
+      .tab-nav {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 16px;
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 10px;
+      }
 
-        .tab-btn {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            background: transparent;
-            border-radius: 7px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            color: #64748b;
-        }
+      .tab-btn {
+        flex: 1;
+        padding: 8px;
+        border: none;
+        background: transparent;
+        border-radius: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        color: #64748b;
+      }
 
-        .tab-btn.active {
-            background: #fff;
-            color: var(--primary);
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
+      .tab-btn.active {
+        background: #fff;
+        color: var(--primary);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
 
-        .tab-content {
-            font-size: 15px;
-            color: #334155;
-            min-height: 80px;
-            padding: 10px;
-        }
+      .tab-content {
+        font-size: 15px;
+        color: #334155;
+        min-height: 80px;
+        padding: 10px;
+      }
 
-        /* Modal Settings */
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(15, 23, 42, 0.7);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 20px;
-            backdrop-filter: blur(4px);
-        }
+      /* Modal Settings */
+      .modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 20px;
+        backdrop-filter: blur(4px);
+      }
 
-        .modal-content {
-            background: #fff;
-            border-radius: 24px;
-            width: 100%;
-            max-width: 750px;
-            padding: 32px;
-            position: relative;
-            max-height: 85vh;
-            overflow-y: auto;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
+      .modal-content {
+        background: #fff;
+        border-radius: 24px;
+        width: 100%;
+        max-width: 750px;
+        padding: 32px;
+        position: relative;
+        max-height: 85vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      }
 
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 16px;
-        }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 16px;
+      }
 
-        .close-btn {
-            font-size: 32px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #94a3b8;
-            line-height: 1;
-        }
+      .close-btn {
+        font-size: 32px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        color: #94a3b8;
+        line-height: 1;
+      }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
 
-        th,
-        td {
-            padding: 14px;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px;
-        }
+      th,
+      td {
+        padding: 14px;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        font-size: 14px;
+      }
 
-        th {
-            background: #f8fafc;
-            color: #64748b;
-            font-weight: 600;
-        }
+      th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 600;
+      }
     </style>
-</head>
+  </head>
 
-<body>
+  <body>
     <main>
-        <div class="header-card">
-            <div class="title">🎯 用語マスター Pro</div>
-            <div class="control-grid">
-                <select id="chapterSelect"></select>
-                <select id="directionSelect">
-                    <option value="forward">用語 → 意味</option>
-                    <option value="reverse">意味 → 用語</option>
-                </select>
-                <button id="shuffleBtn" class="btn">🔀 シャッフル</button>
-                <button id="showHistoryBtn" class="btn">📜 履歴</button>
-                <button id="showGraphBtn" class="btn">📊 進捗グラフ</button>
-            </div>
+      <div class="header-card">
+        <div class="title">🎯 用語マスター Pro</div>
+        <div class="control-grid">
+          <select id="chapterSelect"></select>
+          <select id="directionSelect">
+            <option value="forward">用語 → 意味</option>
+            <option value="reverse">意味 → 用語</option>
+          </select>
+          <button id="shuffleBtn" class="btn">🔀 シャッフル</button>
+          <button id="showHistoryBtn" class="btn">📜 履歴</button>
+          <button id="showGraphBtn" class="btn">📊 進捗グラフ</button>
+        </div>
+      </div>
+
+      <div class="quiz-card">
+        <div class="progress-container">
+          <div class="progress-bar">
+            <div id="progressFill"></div>
+          </div>
+          <div class="stats-text">
+            <span id="progressLabel">0 / 0</span>
+            <span id="scoreLabel">正解: 0 / 0 (0%)</span>
+          </div>
         </div>
 
-        <div class="quiz-card">
-            <div class="progress-container">
-                <div class="progress-bar">
-                    <div id="progressFill"></div>
-                </div>
-                <div class="stats-text">
-                    <span id="progressLabel">0 / 0</span>
-                    <span id="scoreLabel">正解: 0 / 0 (0%)</span>
-                </div>
-            </div>
+        <div id="question"></div>
+        <div id="choices"></div>
 
-            <div id="question"></div>
-            <div id="choices"></div>
-
-            <div id="explainArea" style="display:none;">
-                <div class="tab-nav">
-                    <button class="tab-btn active" data-k="point">ポイント</button>
-                    <button class="tab-btn" data-k="example">具体例</button>
-                    <button class="tab-btn" data-k="memo">暗記法</button>
-                    <button class="tab-btn" data-k="trap">注意点</button>
-                </div>
-                <div id="tabBody" class="tab-content"></div>
-            </div>
-
-            <div style="margin-top:auto; padding-top:32px; display:flex; gap:16px;">
-                <button id="prevBtn" class="btn" style="flex:1;">← 前へ</button>
-                <button id="nextBtn" class="btn btn-primary" style="flex:2;">次へ進む →</button>
-            </div>
+        <div id="explainArea" style="display: none">
+          <div class="tab-nav">
+            <button class="tab-btn active" data-k="point">ポイント</button>
+            <button class="tab-btn" data-k="example">具体例</button>
+            <button class="tab-btn" data-k="memo">暗記法</button>
+            <button class="tab-btn" data-k="trap">注意点</button>
+          </div>
+          <div id="tabBody" class="tab-content"></div>
         </div>
 
-        <div style="text-align:center; margin-top:32px; display:flex; justify-content:center; gap:20px;">
-            <button id="exportCsvBtn" class="btn">📤 CSV出力</button>
-            <button id="resetStatsBtn" class="btn btn-danger">⚠️ 成績リセット</button>
+        <div
+          style="margin-top: auto; padding-top: 32px; display: flex; gap: 16px"
+        >
+          <button id="prevBtn" class="btn" style="flex: 1">← 前へ</button>
+          <button id="nextBtn" class="btn btn-primary" style="flex: 2">
+            次へ進む →
+          </button>
         </div>
+      </div>
 
-        <div id="historyModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 style="margin:0">学習履歴 (最新10件)</h2>
-                    <button class="close-btn">&times;</button>
-                </div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>日時</th>
-                            <th>章</th>
-                            <th>正解数</th>
-                            <th>正解率</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyBody"></tbody>
-                </table>
-            </div>
-        </div>
+      <div
+        style="
+          text-align: center;
+          margin-top: 32px;
+          display: flex;
+          justify-content: center;
+          gap: 20px;
+        "
+      >
+        <button id="exportCsvBtn" class="btn">📤 CSV出力</button>
+        <button id="resetStatsBtn" class="btn btn-danger">
+          ⚠️ 成績リセット
+        </button>
+      </div>
 
-        <div id="graphModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 style="margin:0">章別・習得状況</h2>
-                    <button class="close-btn">&times;</button>
-                </div>
-                <div style="height:350px;">
-                    <canvas id="rateChart"></canvas>
-                </div>
-                <p style="font-size: 12px; color: #64748b; margin-top: 15px; text-align: center;">
-                    ※一度でも正解した用語を「習得済み」としてカウントしています。
-                </p>
-            </div>
+      <div id="historyModal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 style="margin: 0">学習履歴 (最新10件)</h2>
+            <button class="close-btn">&times;</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>日時</th>
+                <th>章</th>
+                <th>正解数</th>
+                <th>正解率</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
         </div>
+      </div>
+
+      <div id="graphModal" class="modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 style="margin: 0">章別・習得状況</h2>
+            <button class="close-btn">&times;</button>
+          </div>
+          <div style="height: 350px">
+            <canvas id="rateChart"></canvas>
+          </div>
+          <p
+            style="
+              font-size: 12px;
+              color: #64748b;
+              margin-top: 15px;
+              text-align: center;
+            "
+          >
+            ※一度でも正解した用語を「習得済み」としてカウントしています。
+          </p>
+        </div>
+      </div>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script src="./data/cards-ch1.js"></script>
     <script src="./data/cards-ch2.js"></script>
+    <script src="./data/cards-ch3.js"></script>
+    <script src="./data/cards-ch4.js"></script>
+    <script src="./data/cards-ch5.js"></script>
+    <script src="./data/cards-ch6.js"></script>
+    <script src="./data/cards-ch7.js"></script>
+    <script src="./data/cards-ch8.js"></script>
+    <script src="./data/cards-ch9.js"></script>
+    <script src="./data/cards-ch10.js"></script>
+    <script src="./data/cards-ch11.js"></script>
+    <script src="./data/cards-ch12.js"></script>
+    <script src="./data/cards-ch13.js"></script>
+    <script src="./data/cards-ch14.js"></script>
+    <script src="./data/cards-ch15.js"></script>
+    <script src="./data/cards-ch16.js"></script>
+    <script src="./data/cards-ch17.js"></script>
+    <script src="./data/cards-ch18.js"></script>
+    <script src="./data/cards-ch19.js"></script>
+    <script src="./data/cards-ch20.js"></script>
+    <script src="./data/cards-ch21.js"></script>
     <script src="app.js"></script>
-</body>
-
+  </body>
 </html>
