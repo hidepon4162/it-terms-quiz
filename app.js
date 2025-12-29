@@ -1,279 +1,226 @@
 (function () {
   "use strict";
 
-  // ===== ローカルストレージキー =====
-  const LS_STATS = "vocab_card_quiz_stats_v1";
-  const LS_NG = "vocab_card_quiz_ng_v1";
-  const LS_DIR = "vocab_card_quiz_direction_v1";
-  const LS_CHOICE_MODE = "vocab_card_quiz_choice_mode_v1";
-  const LS_CHAPTER = "vocab_card_quiz_chapter_v1";
-  const LS_HISTORY = "vocab_card_quiz_session_history_v1";
-  const LS_CRAM = "vocab_card_quiz_cram_mode_v1";
+  // --- 定数 & ストレージキー ---
+  const KEYS = {
+    STATS: "v_stats", NG: "v_ng", DIR: "v_dir",
+    CH: "v_ch", HIST: "v_hist"
+  };
 
-  // ===== カードデータ統合 =====
+  // --- データ準備 ---
   const chapters = {};
   for (let i = 1; i <= 21; i++) {
     const key = `ch${i}`;
-    chapters[key] = { name: `${i}章`, cards: (window[`CARDS_CH${i}`] || []).slice() };
+    if (window[`CARDS_CH${i}`]) {
+      chapters[key] = { name: `${i}章`, cards: window[`CARDS_CH${i}`] };
+    }
   }
 
-  // ===== 状態管理 =====
-  let activeKey = localStorage.getItem(LS_CHAPTER) || "ch1";
-  let direction = localStorage.getItem(LS_DIR) || "forward";
-  let choiceMode = localStorage.getItem(LS_CHOICE_MODE) || "auto";
-  let isNgMode = false;
-  let cramMode = localStorage.getItem(LS_CRAM) === "1";
+  // --- 状態管理 ---
+  let state = {
+    activeKey: localStorage.getItem(KEYS.CH) || "ch1",
+    direction: localStorage.getItem(KEYS.DIR) || "forward",
+    isNgMode: false,
+    idx: 0,
+    questions: [],
+    session: { total: 0, correct: 0 },
+    answered: false
+  };
 
-  let questions = [];
-  let order = [];
-  let idx = 0;
-  let answered = false;
-  let session = { total: 0, correct: 0 };
+  // --- DOM要素の取得 ---
+  const $ = (id) => document.getElementById(id);
+  const UI = {
+    chapter: $("chapterSelect"), direction: $("directionSelect"),
+    question: $("question"), choices: $("choices"), explain: $("explainArea"),
+    progress: $("progressLabel"), score: $("scoreLabel"),
+    hModal: $("historyModal"), gModal: $("graphModal")
+  };
 
-  // ===== DOM取得 (index.htmlのIDに完全準拠) =====
-  const $chapter = document.getElementById("chapter");
-  const $direction = document.getElementById("direction");
-  const $choiceMode = document.getElementById("choiceMode");
-  const $question = document.getElementById("question");
-  const $choices = document.getElementById("choices");
-  const $explain = document.getElementById("explain");
-  const $progress = document.getElementById("progress");
-  const $score = document.getElementById("score");
+  // --- 数式とHTML変換 ---
+  const formatMath = (t) => t ? t.replace(/\$(.*?)\$/g, (_, c) => c.replace(/([a-zA-Z0-9]+)\^([a-zA-Z0-9]+)/g, '$1<sup>$2</sup>')) : "";
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 
-  // ボタン類
-  const $historyBtn = document.getElementById("history");
-  const $exportCsvBtn = document.getElementById("exportCsv");
-  const $showGraphBtn = document.getElementById("showGraph");
-  const $resetStats = document.getElementById("resetStats");
-
-  // モーダル類
-  const $historyModal = document.getElementById("historyModal");
-  const $graphModal = document.getElementById("graphModal");
-  const $historyBody = document.getElementById("historyBody");
-
-  // ===== 数式変換 =====
-  function formatMath(text) {
-    if (!text) return "";
-    return text.replace(/\$(.*?)\$/g, (match, content) => {
-      let res = content.replace(/([a-zA-Z0-9]+)\^([a-zA-Z0-9]+)/g, '$1<sup>$2</sup>');
-      if (res.length === 1 && /[a-zA-Z]/.test(res)) return `<i>${res}</i>`;
-      return res;
-    });
-  }
-
-  function escapeHtml(s) {
-    return String(s ?? "").replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-  }
-
-  // ==============================
-  // 修正ポイント：全角コロン（：）と半角（:）の両方に対応
-  // ==============================
-  function parseExtra(raw) {
+  const parseExtra = (raw) => {
     const res = { point: "", trap: "", example: "", memo: "" };
     if (!raw) return res;
-    // 分割ルールを全角・半角両対応に
-    const parts = raw.split(/(?=ポイント[:：]|ひっかけ[:：]|例[:：]|暗記[:：])/);
-    parts.forEach(p => {
+    raw.split(/(?=ポイント[:：]|ひっかけ[:：]|例[:：]|暗記[:：])/).forEach(p => {
       const s = p.trim();
-      if (s.startsWith("ポイント")) res.point = s.replace(/^ポイント[:：]/, "").trim();
-      else if (s.startsWith("ひっかけ")) res.trap = s.replace(/^ひっかけ[:：]/, "").trim();
-      else if (s.startsWith("例")) res.example = s.replace(/^例[:：]/, "").trim();
-      else if (s.startsWith("暗記")) res.memo = s.replace(/^暗記[:：]/, "").trim();
+      if (s.startsWith("ポイント")) res.point = s.replace(/^ポイント[:：]/, "");
+      else if (s.startsWith("ひっかけ")) res.trap = s.replace(/^ひっかけ[:：]/, "");
+      else if (s.startsWith("例")) res.example = s.replace(/^例[:：]/, "");
+      else if (s.startsWith("暗記")) res.memo = s.replace(/^暗記[:：]/, "");
     });
     return res;
-  }
+  };
 
-  // ===== クイズロジック =====
-  function buildQuestions() {
-    const ch = chapters[activeKey];
-    if (!ch) return (questions = []);
-    questions = ch.cards.map(card => {
-      const mode = (choiceMode === "auto") ? (direction === "forward" ? "def" : "term") : choiceMode;
-      const correct = (mode === "def") ? card.definition : card.term;
-      let dummies = ch.cards.filter(c => c.id !== card.id).map(c => (mode === "def") ? c.definition : c.term);
-      dummies.sort(() => Math.random() - 0.5);
-      return { cardId: card.id, prompt: (direction === "forward") ? card.term : card.definition, correct: correct, choices: [correct, ...dummies.slice(0, 3)].sort(() => Math.random() - 0.5), card: card };
+  // --- クイズロジック ---
+  const initQuiz = () => {
+    const ch = chapters[state.activeKey];
+    if (!ch) return;
+
+    state.questions = ch.cards.map(card => {
+      const correct = (state.direction === "forward") ? card.definition : card.term;
+      const prompt = (state.direction === "forward") ? card.term : card.definition;
+      let dummies = ch.cards.filter(c => c.id !== card.id).map(c => (state.direction === "forward") ? c.definition : c.term);
+      dummies = dummies.sort(() => Math.random() - 0.5).slice(0, 3);
+      return {
+        id: card.id, prompt, correct, card,
+        choices: [correct, ...dummies].sort(() => Math.random() - 0.5)
+      };
     });
-  }
 
-  function buildOrder() {
-    order = questions.map((_, i) => i);
-    if (isNgMode) {
-      const ngData = JSON.parse(localStorage.getItem(LS_NG) || "{}")[activeKey] || {};
-      order = order.filter(i => ngData[questions[i].cardId]);
-    } else {
-      order.sort(() => Math.random() - 0.5);
+    if (state.isNgMode) {
+      const ngData = JSON.parse(localStorage.getItem(KEYS.NG) || "{}")[state.activeKey] || {};
+      state.questions = state.questions.filter(q => ngData[q.id]);
     }
-  }
 
-  function render() {
-    answered = false;
-    $choices.innerHTML = "";
-    $explain.innerHTML = "";
-    if (order.length === 0) {
-      $question.innerHTML = isNgMode ? "NG登録された問題はありません。" : "問題がありません。";
+    state.idx = 0;
+    state.session = { total: 0, correct: 0 };
+    render();
+  };
+
+  const render = () => {
+    state.answered = false;
+    UI.choices.innerHTML = ""; UI.explain.innerHTML = "";
+
+    if (state.questions.length === 0) {
+      UI.question.textContent = "対象の問題がありません。";
       return;
     }
-    const q = questions[order[idx]];
-    $question.innerHTML = formatMath(escapeHtml(q.prompt));
-    $progress.textContent = `${idx + 1} / ${order.length}`;
-    $score.textContent = `正解: ${session.correct} / 回答: ${session.total}`;
 
-    q.choices.forEach(text => {
-      const btn = document.createElement("div");
-      btn.className = "choice";
-      btn.innerHTML = formatMath(escapeHtml(text));
-      btn.onclick = () => handleAnswer(q, btn, text);
-      $choices.appendChild(btn);
+    const q = state.questions[state.idx];
+    UI.question.innerHTML = formatMath(esc(q.prompt));
+    UI.progress.textContent = `${state.idx + 1} / ${state.questions.length}`;
+    UI.score.textContent = `正解: ${state.session.correct} / ${state.session.total}`;
+
+    q.choices.forEach(txt => {
+      const b = document.createElement("div");
+      b.className = "choice";
+      b.innerHTML = formatMath(esc(txt));
+      b.onclick = () => handleAnswer(q, b, txt);
+      UI.choices.appendChild(b);
     });
-  }
+  };
 
-  function handleAnswer(q, btn, selectedText) {
-    if (answered) return;
-    answered = true;
-    const isCorrect = (selectedText === q.correct);
-    session.total++;
-    if (isCorrect) session.correct++;
+  const handleAnswer = (q, el, selected) => {
+    if (state.answered) return;
+    state.answered = true;
+    const isOk = (selected === q.correct);
 
-    btn.classList.add(isCorrect ? "correct" : "wrong");
-    Array.from($choices.children).forEach(el => { if (el.textContent === q.correct) el.classList.add("correct"); });
+    state.session.total++;
+    if (isOk) state.session.correct++;
 
-    updateStats(q.cardId, isCorrect);
+    el.classList.add(isOk ? "correct" : "wrong");
+    Array.from(UI.choices.children).forEach(c => {
+      if (c.textContent === q.correct) c.classList.add("correct");
+    });
 
-    const extra = parseExtra(q.card.extraExplain);
+    saveStats(q.id, isOk);
+    saveHistory();
 
-    // 解説部分のHTML構築
-    $explain.innerHTML = `
+    const ex = parseExtra(q.card.extraExplain);
+    UI.explain.innerHTML = `
       <div class="explainCard">
-        <div style="font-weight:bold; color:${isCorrect ? "#22c55e" : "#ef4444"}; margin-bottom:8px;">
-          ${isCorrect ? "● 正解" : "× 不正解"}
+        <b>正解: ${formatMath(esc(q.correct))}</b>
+        <div class="tabs">
+          <button class="tabBtn active" data-k="point">ポイント</button>
+          <button class="tabBtn" data-k="example">例</button>
+          <button class="tabBtn" data-k="memo">暗記</button>
+          <button class="tabBtn" data-k="trap">ひっかけ</button>
         </div>
-        <div style="margin-bottom:12px;"><b>正解：</b>${formatMath(escapeHtml(q.correct))}</div>
-        <details>
-          <summary style="cursor:pointer; font-size:12px; color:#6b7280;">▼ 詳細解説を表示</summary>
-          <div class="tabs">
-            <button class="tabBtn active" data-key="point">ポイント</button>
-            <button class="tabBtn" data-key="example">例</button>
-            <button class="tabBtn" data-key="memo">暗記</button>
-            <button class="tabBtn" data-key="trap">ひっかけ</button>
-          </div>
-          <div id="tab-body" class="tabPanel">
-            ${formatMath(escapeHtml(extra.point || "（未設定）")).replace(/\n/g, "<br>")}
-          </div>
-        </details>
+        <div id="tabBody" class="tabPanel">${formatMath(esc(ex.point || "なし"))}</div>
       </div>
     `;
 
-    // タブ切り替えイベント
-    $explain.querySelectorAll(".tabBtn").forEach(t => {
-      t.onclick = (e) => {
-        e.stopPropagation();
-        $explain.querySelectorAll(".tabBtn").forEach(b => b.classList.remove("active"));
-        t.classList.add("active");
-        const key = t.getAttribute("data-key");
-        document.getElementById("tab-body").innerHTML = formatMath(escapeHtml(extra[key] || "（未設定）")).replace(/\n/g, "<br>");
+    UI.explain.querySelectorAll(".tabBtn").forEach(btn => {
+      btn.onclick = () => {
+        UI.explain.querySelectorAll(".tabBtn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const k = btn.dataset.k;
+        $("tabBody").innerHTML = formatMath(esc(ex[k] || "なし")).replace(/\n/g, "<br>");
       };
     });
-  }
+  };
 
-  function updateStats(id, isCorrect) {
-    let ngData = JSON.parse(localStorage.getItem(LS_NG) || "{}");
-    ngData[activeKey] = ngData[activeKey] || {};
-    if (!isCorrect) ngData[activeKey][id] = true; else delete ngData[activeKey][id];
-    localStorage.setItem(LS_NG, JSON.stringify(ngData));
+  const saveStats = (id, isOk) => {
+    let ng = JSON.parse(localStorage.getItem(KEYS.NG) || "{}");
+    ng[state.activeKey] = ng[state.activeKey] || {};
+    if (!isOk) ng[state.activeKey][id] = true; else delete ng[state.activeKey][id];
+    localStorage.setItem(KEYS.NG, JSON.stringify(ng));
 
-    let stats = JSON.parse(localStorage.getItem(LS_STATS) || "{}");
+    let stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
     stats[id] = stats[id] || { c: 0, w: 0 };
-    if (isCorrect) stats[id].c++; else stats[id].w++;
-    localStorage.setItem(LS_STATS, JSON.stringify(stats));
-  }
+    if (isOk) stats[id].c++; else stats[id].w++;
+    localStorage.setItem(KEYS.STATS, JSON.stringify(stats));
+  };
 
-  function saveSessionHistory() {
-    if (session.total === 0) return;
-    let history = JSON.parse(localStorage.getItem(LS_HISTORY) || "[]");
-    history.unshift({
-      date: new Date().toLocaleString(),
-      chapter: chapters[activeKey].name,
-      mode: direction === "forward" ? "順引き" : (direction === "reverse" ? "逆引き" : "混合"),
-      score: `${session.correct}/${session.total}`,
-      rate: Math.round((session.correct / session.total) * 100) + "%"
+  const saveHistory = () => {
+    let hist = JSON.parse(localStorage.getItem(KEYS.HIST) || "[]");
+    const entry = {
+      d: new Date().toLocaleString(),
+      ch: chapters[state.activeKey].name,
+      m: state.direction === "forward" ? "順" : "逆",
+      s: `${state.session.correct}/${state.session.total}`,
+      r: Math.round((state.session.correct / state.session.total) * 100) + "%"
+    };
+    if (hist.length > 0 && hist[0].ch === entry.ch && state.session.total > 1) hist[0] = entry;
+    else hist.unshift(entry);
+    localStorage.setItem(KEYS.HIST, JSON.stringify(hist.slice(0, 10)));
+  };
+
+  // --- イベント設定 ---
+  // 設定変更
+  UI.chapter.onchange = (e) => { state.activeKey = e.target.value; localStorage.setItem(KEYS.CH, state.activeKey); initQuiz(); };
+  UI.direction.onchange = (e) => { state.direction = e.target.value; localStorage.setItem(KEYS.DIR, state.direction); initQuiz(); };
+  $("allModeBtn").onclick = () => { state.isNgMode = false; initQuiz(); };
+  $("ngModeBtn").onclick = () => { state.isNgMode = true; initQuiz(); };
+  $("shuffleBtn").onclick = () => { state.questions.sort(() => Math.random() - 0.5); render(); };
+
+  // ナビ
+  $("nextBtn").onclick = () => { if (state.idx < state.questions.length - 1) { state.idx++; render(); } };
+  $("prevBtn").onclick = () => { if (state.idx > 0) { state.idx--; render(); } };
+
+  // モーダル表示
+  $("showHistoryBtn").onclick = () => {
+    const hist = JSON.parse(localStorage.getItem(KEYS.HIST) || "[]");
+    $("historyBody").innerHTML = hist.map(h => `<tr><td>${h.d}</td><td>${h.ch}</td><td>${h.m}</td><td>${h.s}</td><td>${h.r}</td></tr>`).join("") || '<tr><td colspan="5">履歴なし</td></tr>';
+    UI.hModal.style.display = "flex";
+  };
+
+  $("showGraphBtn").onclick = () => {
+    UI.gModal.style.display = "flex";
+    const stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
+    const data = Object.keys(chapters).map(k => chapters[k].cards.filter(c => stats[c.id]?.c > 0).length);
+    new Chart($("rateChart"), {
+      type: 'bar',
+      data: { labels: Object.keys(chapters).map(k => chapters[k].name), datasets: [{ label: '習得済', data, backgroundColor: '#3b82f6' }] }
     });
-    localStorage.setItem(LS_HISTORY, JSON.stringify(history.slice(0, 10)));
-  }
+  };
 
-  // ===== イベント登録 =====
-  document.getElementById("next").onclick = () => { if (idx < order.length - 1) { idx++; render(); } else { saveSessionHistory(); alert("終了です。"); } };
-  document.getElementById("prev").onclick = () => { if (idx > 0) { idx--; render(); } };
-  document.getElementById("restart").onclick = () => { saveSessionHistory(); session = { total: 0, correct: 0 }; idx = 0; buildOrder(); render(); };
-  document.getElementById("allMode").onclick = () => { isNgMode = false; document.getElementById("restart").click(); };
-  document.getElementById("ngMode").onclick = () => { isNgMode = true; document.getElementById("restart").click(); };
-  document.getElementById("shuffle").onclick = () => { buildOrder(); idx = 0; render(); };
+  // モーダルを閉じる (すべてのclose-btnに対して設定)
+  document.querySelectorAll(".close-btn").forEach(btn => {
+    btn.onclick = () => { UI.hModal.style.display = "none"; UI.gModal.style.display = "none"; };
+  });
 
-  if ($historyBtn) {
-    $historyBtn.onclick = () => {
-      const history = JSON.parse(localStorage.getItem(LS_HISTORY) || "[]");
-      $historyBody.innerHTML = history.map(h => `
-        <tr>
-          <td>${h.date}</td><td>${h.chapter}</td><td>${h.mode}</td>
-          <td>-</td><td>-</td><td>${h.score.split('/')[0]}</td>
-          <td>${h.score.split('/')[1]}</td><td>${h.rate}</td><td></td>
-        </tr>
-      `).join("") || '<tr><td colspan="9">履歴なし</td></tr>';
-      $historyModal.removeAttribute("hidden");
-    };
-  }
+  // CSV
+  $("exportCsvBtn").onclick = () => {
+    let csv = "\uFEFFid,用語,正解数\n";
+    const stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
+    Object.values(chapters).forEach(ch => ch.cards.forEach(c => {
+      csv += `${c.id},"${c.term}",${stats[c.id]?.c || 0}\n`;
+    }));
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "stats.csv"; a.click();
+  };
 
-  if ($showGraphBtn) {
-    $showGraphBtn.onclick = () => {
-      $graphModal.removeAttribute("hidden");
-      const stats = JSON.parse(localStorage.getItem(LS_STATS) || "{}");
-      const ctx = document.getElementById("rateChart").getContext("2d");
-      const data = Object.keys(chapters).map(k => {
-        let count = 0;
-        chapters[k].cards.forEach(c => { if (stats[c.id] && stats[c.id].c > 0) count++; });
-        return count;
-      });
-      if (window.myChart) window.myChart.destroy();
-      window.myChart = new Chart(ctx, {
-        type: 'bar',
-        data: { labels: Object.keys(chapters).map(k => chapters[k].name), datasets: [{ label: '習得済', data: data, backgroundColor: '#111' }] }
-      });
-    };
-  }
+  $("resetStatsBtn").onclick = () => { if (confirm("全消去しますか？")) { localStorage.clear(); location.reload(); } };
 
-  if ($exportCsvBtn) {
-    $exportCsvBtn.onclick = () => {
-      let stats = JSON.parse(localStorage.getItem(LS_STATS) || "{}");
-      let csv = "\uFEFFid,用語,正解,不正解\n";
-      Object.keys(chapters).forEach(k => {
-        chapters[k].cards.forEach(c => {
-          let s = stats[c.id] || { c: 0, w: 0 };
-          csv += `${c.id},"${c.term}",${s.c},${s.w}\n`;
-        });
-      });
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "stats.csv";
-      link.click();
-    };
-  }
-
-  if ($resetStats) {
-    $resetStats.onclick = () => { if (confirm("消去しますか？")) { localStorage.clear(); location.reload(); } };
-  }
-
-  document.getElementById("closeHistory").onclick = () => $historyModal.setAttribute("hidden", "");
-  document.getElementById("closeGraph").onclick = () => $graphModal.setAttribute("hidden", "");
-
-  $chapter.onchange = (e) => { activeKey = e.target.value; localStorage.setItem(LS_CHAPTER, activeKey); document.getElementById("restart").click(); };
-  $direction.onchange = (e) => { direction = e.target.value; localStorage.setItem(LS_DIR, direction); render(); };
-  $choiceMode.onchange = (e) => { choiceMode = e.target.value; localStorage.setItem(LS_CHOICE_MODE, choiceMode); render(); };
-
-  // 初期化
-  $chapter.value = activeKey;
-  $direction.value = direction;
-  $choiceMode.value = choiceMode;
-  buildQuestions(); buildOrder(); render();
-
+  // --- 初期起動 ---
+  Object.keys(chapters).forEach(k => {
+    const opt = document.createElement("option"); opt.value = k; opt.textContent = chapters[k].name;
+    UI.chapter.appendChild(opt);
+  });
+  UI.chapter.value = state.activeKey;
+  UI.direction.value = state.direction;
+  initQuiz();
 })();

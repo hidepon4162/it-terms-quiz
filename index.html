@@ -5,10 +5,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>重要用語クイズ（カード式）</title>
-
+    <link rel="stylesheet" href="style.css">
     <style>
         body {
-            font-family: system-ui, "Noto Sans JP", sans-serif;
+            font-family: system-ui, sans-serif;
             margin: 0;
             background: #f6f7f9;
             color: #111;
@@ -26,11 +26,7 @@
             border-radius: 14px;
             padding: 16px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
-        }
-
-        h1 {
-            font-size: 18px;
-            margin: 0 0 8px;
+            margin-bottom: 16px;
         }
 
         .row {
@@ -38,222 +34,166 @@
             gap: 10px;
             flex-wrap: wrap;
             align-items: center;
+            margin-bottom: 12px;
         }
 
-        .muted {
-            color: #6b7280;
-            font-size: 12px;
-        }
-
-        .pill {
-            font-size: 12px;
+        .btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            background: #fff;
+            cursor: pointer;
+            font-size: 14px;
             color: #374151;
-            background: #f3f4f6;
-            padding: 4px 8px;
-            border-radius: 999px;
-            display: inline-block;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
         }
 
-        .warn {
-            color: #b45309;
+        .btn:hover {
+            background: #f9fafb;
         }
 
-        .question {
-            font-size: 18px;
-            margin: 14px 0;
-            line-height: 1.6;
-            white-space: pre-wrap;
+        .btn-primary {
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        #question {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 20px 0;
+            min-height: 3em;
+        }
+
+        #choices {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
         .choice {
-            border: 1px solid #d1d5db;
-            border-radius: 12px;
-            padding: 10px 12px;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
             cursor: pointer;
+            transition: 0.2s;
             background: #fff;
-            margin-bottom: 8px;
-            white-space: pre-wrap;
         }
 
         .choice:hover {
-            background: #f3f4f6;
+            border-color: #3b82f6;
+            background: #f0f7ff;
         }
 
         .choice.correct {
             background: #dcfce7;
             border-color: #22c55e;
+            color: #166534;
+            pointer-events: none;
         }
 
         .choice.wrong {
             background: #fee2e2;
             border-color: #ef4444;
+            color: #991b1b;
+            pointer-events: none;
         }
 
-        button,
-        select {
-            border: 1px solid #d1d5db;
-            background: #fff;
-            padding: 10px 12px;
-            border-radius: 12px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #f3f4f6;
-        }
-
-        button.primary {
-            background: #111;
-            color: #fff;
-            border-color: #111;
-        }
-
-        button.primary:hover {
-            background: #000;
-        }
-
-        /* ===== 解説UI（完成形）===== */
+        /* タブと解説 */
         .explainCard {
-            margin-top: 10px;
-            border-top: 1px dashed #e5e7eb;
-            padding-top: 10px;
-        }
-
-        .explainHeader {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-        }
-
-        .toggle {
-            display: inline-flex;
-            gap: 8px;
-            align-items: center;
-            user-select: none;
-            font-size: 12px;
-            color: #374151;
-            background: #f3f4f6;
-            border-radius: 999px;
-            padding: 6px 10px;
-            cursor: pointer;
-            border: 1px solid #e5e7eb;
-        }
-
-        .toggle input {
-            accent-color: #111;
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 10px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
         }
 
         .tabs {
             display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
-            margin-top: 10px;
+            gap: 4px;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 12px;
         }
 
         .tabBtn {
-            padding: 8px 10px;
-            border-radius: 999px;
-            border: 1px solid #d1d5db;
-            background: #fff;
+            padding: 6px 12px;
+            border: none;
+            background: none;
             cursor: pointer;
-            font-size: 12px;
-            color: #374151;
+            font-size: 13px;
+            color: #64748b;
+            border-bottom: 2px solid transparent;
         }
 
         .tabBtn.active {
-            background: #111;
-            border-color: #111;
-            color: #fff;
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+            font-weight: bold;
         }
 
         .tabPanel {
-            margin-top: 10px;
-            padding: 10px;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            background: #fafafa;
-            white-space: pre-wrap;
+            font-size: 14px;
             line-height: 1.6;
+            min-height: 80px;
         }
 
-        .tabPanel[hidden] {
-            display: none;
-        }
-
-        .foldBody[hidden] {
-            display: none;
-        }
-
-        /* ===== 下部操作列：常に最前面 & クリック奪われ防止 ===== */
-        .actions {
-            margin-top: 12px;
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            flex-wrap: wrap;
-            position: relative;
-            z-index: 10;
-        }
-
-        /* ===== モーダル ===== */
-        .modal[hidden] {
-            display: none;
-        }
-
-        .modal {
+        /* モーダル共通 (CSSで制御) */
+        .modal-overlay {
             position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, .35);
-            display: flex;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
             align-items: center;
             justify-content: center;
-            padding: 16px;
-            z-index: 50;
+            z-index: 1000;
         }
 
-        .modal .panel {
-            width: min(980px, 100%);
-            max-height: 80vh;
-            overflow: auto;
+        .modal-content {
             background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, .15);
-            padding: 14px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            padding: 24px;
+            border-radius: 16px;
+            overflow-y: auto;
+            position: relative;
         }
 
-        .modal h2 {
-            font-size: 16px;
-            margin: 0 0 10px;
+        .close-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-size: 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #666;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 12px;
+            font-size: 13px;
         }
 
         th,
         td {
-            border-bottom: 1px solid #e5e7eb;
-            padding: 8px 6px;
-            vertical-align: top;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
             text-align: left;
-            white-space: nowrap;
         }
 
-        td.wrap {
-            white-space: normal;
-        }
-
-        canvas {
-            width: 100%;
-            height: 320px;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            background: #fff;
+        th {
+            background: #f9fafb;
         }
     </style>
 </head>
@@ -261,162 +201,71 @@
 <body>
     <main>
         <div class="card">
-            <h1>寝る前10分＆試験直前：重要用語 四択クイズ（カード式）</h1>
+            <h1>重要用語クイズ</h1>
+            <div class="row">
+                <select id="chapterSelect"></select>
+                <select id="directionSelect">
+                    <option value="forward">用語 → 意味</option>
+                    <option value="reverse">意味 → 用語</option>
+                </select>
+                <button id="allModeBtn" class="btn btn-primary">全問</button>
+                <button id="ngModeBtn" class="btn">NGのみ</button>
+                <button id="shuffleBtn" class="btn">シャッフル</button>
+            </div>
+            <div class="row">
+                <button id="showHistoryBtn" class="btn">履歴を見る</button>
+                <button id="showGraphBtn" class="btn">グラフ</button>
+                <button id="exportCsvBtn" class="btn">CSV出力</button>
+                <button id="resetStatsBtn" class="btn" style="color:red">リセット</button>
+            </div>
+        </div>
 
+        <div class="card">
             <div class="row" style="justify-content: space-between;">
-                <div class="row">
-                    <label class="muted">章</label>
-                    <select id="chapter">
-                        <option value="ch1" selected>1章</option>
-                        <option value="ch2">2章</option>
-                        <option value="ch3">3章</option>
-                        <option value="ch4">4章</option>
-                        <option value="ch5">5章</option>
-                        <option value="ch6">6章</option>
-                        <option value="ch7">7章</option>
-                        <option value="ch8">8章</option>
-                        <option value="ch9">9章</option>
-                        <option value="ch10">10章</option>
-                        <option value="ch11">11章</option>
-                        <option value="ch12">12章</option>
-                        <option value="ch13">13章</option>
-                        <option value="ch14">14章</option>
-                        <option value="ch15">15章</option>
-                        <option value="ch16">16章</option>
-                        <option value="ch17">17章</option>
-                        <option value="ch18">18章</option>
-                        <option value="ch19">19章</option>
-                        <option value="ch20">20章</option>
-                        <option value="ch21">21章</option>
-                    </select>
-
-                    <label class="muted">出題</label>
-                    <select id="direction">
-                        <option value="forward">順引き（用語→定義）</option>
-                        <option value="reverse">逆引き（定義→用語）</option>
-                        <option value="mixed">ミックス</option>
-                    </select>
-
-                    <label class="muted">選択肢</label>
-                    <select id="choiceMode">
-                        <option value="def">定義で選ぶ</option>
-                        <option value="term">用語で選ぶ</option>
-                        <option value="auto" selected>自動（順=定義 / 逆=用語）</option>
-                    </select>
-
-                    <button id="shuffle">シャッフル</button>
-                    <button id="ngMode">NGのみ</button>
-                    <button id="allMode">全問</button>
-
-                    <span class="muted" id="modeLabel"></span>
-                    <span class="pill" id="metaPill"></span>
-                    <span class="muted warn" id="dataWarn"></span>
-                </div>
-
-                <div class="row">
-                    <div class="muted" id="progress"></div>
-                    <div class="muted" id="score"></div>
-                </div>
+                <span id="progressLabel" class="muted">0 / 0</span>
+                <span id="scoreLabel" class="muted">正解: 0 / 0</span>
             </div>
-
-            <div class="question" id="question"></div>
+            <div id="question"></div>
             <div id="choices"></div>
-
-            <!-- 解説（回答後に出る） -->
-        <div id="explain" style="margin-top: 10px;"></div>
-        
-            <!-- 下部操作（常にクリック可能） -->
-            <div class="actions">
-                <div class="row">
-                    <button id="prev">戻る</button>
-                    <button class="primary" id="next">次へ</button>
-                </div>
-                <div class="row">
-                    <button id="restart">最初から</button>
-                    <button id="resetStats">成績リセット</button>
-                    <button id="history">履歴を見る</button>
-                    <button id="exportCsv">CSV出力</button>
-                    <button id="showGraph">グラフ</button>
-                </div>
+            <div id="explainArea"></div>
+            <div class="row" style="margin-top:20px; justify-content:center;">
+                <button id="prevBtn" class="btn">前へ</button>
+                <button id="nextBtn" class="btn btn-primary" style="min-width:120px;">次へ</button>
             </div>
         </div>
 
-        <!-- ===== 履歴モーダル ===== -->
-        <div class="modal" id="historyModal" hidden>
-            <div class="panel">
-                <div class="row" style="justify-content: space-between;">
-                    <h2>成績履歴（最新10件）</h2>
-                    <button id="closeHistory" type="button">閉じる</button>
-                </div>
-                <div class="muted" id="historyHint"></div>
-
-                <div style="margin-top:10px;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>日時</th>
-                                <th>章</th>
-                                <th>モード</th>
-                                <th>出題</th>
-                                <th>選択肢</th>
-                                <th>正答</th>
-                                <th>総数</th>
-                                <th>正答率</th>
-                                <th class="wrap">メモ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyBody"></tbody>
-                    </table>
-                </div>
+        <div id="historyModal" class="modal-overlay">
+            <div class="modal-content">
+                <button class="close-btn">&times;</button>
+                <h2>学習履歴 (最新10件)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>日時</th>
+                            <th>章</th>
+                            <th>モード</th>
+                            <th>スコア</th>
+                            <th>正解率</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody"></tbody>
+                </table>
             </div>
         </div>
 
-        <!-- ===== グラフモーダル ===== -->
-        <div class="modal" id="graphModal" hidden>
-            <div class="panel">
-                <div class="row" style="justify-content: space-between;">
-                    <h2>章ごとの平均正答率 推移（セッション別）</h2>
-                    <button id="closeGraph" type="button">閉じる</button>
-                </div>
-
-                <div class="row">
-                    <label class="muted">章</label>
-                    <select id="graphChapter"></select>
-                    <span class="muted">※履歴が無い章は表示されません</span>
-                </div>
-
-                <canvas id="rateChart" width="900" height="320"></canvas>
-                <div class="muted" id="graphHint" style="margin-top:8px;"></div>
+        <div id="graphModal" class="modal-overlay">
+            <div class="modal-content">
+                <button class="close-btn">&times;</button>
+                <h2>章別習得状況</h2>
+                <canvas id="rateChart" width="700" height="300"></canvas>
             </div>
         </div>
-
     </main>
 
-    <!-- ===== カードデータ（章別）===== -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="./data/cards-ch1.js"></script>
     <script src="./data/cards-ch2.js"></script>
-    <script src="./data/cards-ch3.js"></script>
-    <script src="./data/cards-ch4.js"></script>
-    <script src="./data/cards-ch5.js"></script>
-    <script src="./data/cards-ch6.js"></script>
-    <script src="./data/cards-ch7.js"></script>
-    <script src="./data/cards-ch8.js"></script>
-    <script src="./data/cards-ch9.js"></script>
-    <script src="./data/cards-ch10.js"></script>
-    <script src="./data/cards-ch11.js"></script>
-    <script src="./data/cards-ch12.js"></script>
-    <script src="./data/cards-ch13.js"></script>
-    <script src="./data/cards-ch14.js"></script>
-    <script src="./data/cards-ch15.js"></script>
-    <script src="./data/cards-ch16.js"></script>
-    <script src="./data/cards-ch17.js"></script>
-    <script src="./data/cards-ch18.js"></script>
-    <script src="./data/cards-ch19.js"></script>
-    <script src="./data/cards-ch20.js"></script>
-    <script src="./data/cards-ch21.js"></script>
-
-    <!-- ===== アプリ本体 ===== -->
-    <script src="./app.js"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
