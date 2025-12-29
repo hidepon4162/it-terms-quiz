@@ -112,23 +112,21 @@
     const res = { point: "", trap: "", example: "", memo: "" };
     if (!raw) return res;
 
-    // キーワードごとに分割し、それぞれの内容を抽出する
-    // 「ポイント:」から次のキーワード（例：や 暗記：）の手前までを正規表現で取得
-    const extract = (regex) => {
-      const match = raw.match(regex);
-      return match ? match[1].trim() : "";
-    };
+    // 戦略：文章の途中にある「例：」に反応しないよう、
+    // 「改行の直後にあるキーワード」または「文字列の先頭にあるキーワード」のみを区切りにする
+    const parts = raw.split(/\n(?=ポイント[:：]|ひっかけ[:：]|例[:：]|暗記[:：])|^ポイント[:：]|^ひっかけ[:：]|^例[:：]|^暗記[:：]/);
 
-    // 各項目を抽出（次のキーワードが出てくるか、文字列の末尾までを取得）
-    res.point = extract(/ポイント[:：]([\s\S]*?)(?=(ひっかけ|例|暗記)[:：]|$)/);
-    res.trap = extract(/ひっかけ[:：]([\s\S]*?)(?=(ポイント|例|暗記)[:：]|$)/);
-    res.example = extract(/例[:：]([\s\S]*?)(?=(ポイント|ひっかけ|暗記)[:：]|$)/);
-    res.memo = extract(/暗記[:：]([\s\S]*?)(?=(ポイント|ひっかけ|例)[:：]|$)/);
+    parts.forEach(p => {
+      const text = p.trim();
+      // 各行がどのキーワードで始まっているかを確認して、中身を格納する
+      if (text.startsWith("ポイント")) res.point = text.replace(/^ポイント[:：]/, "").trim();
+      else if (text.startsWith("ひっかけ")) res.trap = text.replace(/^ひっかけ[:：]/, "").trim();
+      else if (text.startsWith("例")) res.example = text.replace(/^例[:：]/, "").trim();
+      else if (text.startsWith("暗記")) res.memo = text.replace(/^暗記[:：]/, "").trim();
 
-    // もし上記で取れなかった場合（古い形式など）のフォールバック
-    if (!res.point && !res.trap && !res.example && !res.memo) {
-      res.point = raw;
-    }
+      // 最初の一行にキーワードがない場合（フォールバック）
+      else if (!res.point && text) res.point = text;
+    });
 
     return res;
   };
