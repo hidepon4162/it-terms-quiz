@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>重要用語クイズ</title>
+    <title>重要用語クイズマスター</title>
     <style>
         :root {
             --primary: #3b82f6;
@@ -23,7 +23,7 @@
         }
 
         main {
-            max-width: 800px;
+            max-width: 850px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -33,12 +33,13 @@
             background: var(--card);
             border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
             margin-bottom: 24px;
+            border: 1px solid var(--border);
         }
 
         .title {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 800;
             margin: 0 0 16px;
             color: var(--primary);
@@ -49,11 +50,10 @@
 
         .control-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 12px;
         }
 
-        /* Common Components */
         select,
         .btn {
             padding: 10px 14px;
@@ -63,6 +63,7 @@
             font-size: 14px;
             cursor: pointer;
             transition: all 0.2s;
+            color: var(--text);
         }
 
         .btn-primary {
@@ -88,9 +89,10 @@
             border-radius: 20px;
             padding: 32px;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            min-height: 400px;
+            min-height: 450px;
             display: flex;
             flex-direction: column;
+            border: 1px solid var(--border);
         }
 
         .progress-container {
@@ -98,9 +100,9 @@
         }
 
         .progress-bar {
-            height: 8px;
+            height: 10px;
             background: var(--border);
-            border-radius: 4px;
+            border-radius: 5px;
             overflow: hidden;
         }
 
@@ -108,7 +110,7 @@
             height: 100%;
             background: var(--primary);
             width: 0%;
-            transition: width 0.3s;
+            transition: width 0.4s ease;
         }
 
         .stats-text {
@@ -121,25 +123,27 @@
         }
 
         #question {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 700;
             margin: 20px 0 32px;
             text-align: center;
             color: #0f172a;
+            min-height: 1.5em;
         }
 
         #choices {
             display: grid;
-            gap: 12px;
+            gap: 14px;
         }
 
         .choice {
-            padding: 16px 20px;
+            padding: 18px 24px;
             border: 2px solid var(--border);
-            border-radius: 12px;
+            border-radius: 14px;
             font-weight: 500;
             transition: all 0.2s;
             background: #fff;
+            cursor: pointer;
         }
 
         .choice:hover {
@@ -151,28 +155,30 @@
             background: #dcfce7;
             border-color: #22c55e;
             color: #166534;
+            pointer-events: none;
         }
 
         .choice.wrong {
             background: #fee2e2;
             border-color: #ef4444;
             color: #991b1b;
+            pointer-events: none;
         }
 
-        /* Explanation */
+        /* Explanation Tabs */
         #explainArea {
-            margin-top: 24px;
+            margin-top: 28px;
             border-top: 2px solid var(--border);
             padding-top: 24px;
         }
 
         .tab-nav {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             margin-bottom: 16px;
             background: #f1f5f9;
             padding: 4px;
-            border-radius: 8px;
+            border-radius: 10px;
         }
 
         .tab-btn {
@@ -180,7 +186,7 @@
             padding: 8px;
             border: none;
             background: transparent;
-            border-radius: 6px;
+            border-radius: 7px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
@@ -196,62 +202,70 @@
         .tab-content {
             font-size: 15px;
             color: #334155;
-            min-height: 100px;
-            background: #fff;
-            padding: 12px;
-            border-radius: 8px;
+            min-height: 80px;
+            padding: 10px;
         }
 
-        /* Modal */
+        /* Modal Settings */
         .modal {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(15, 23, 42, 0.7);
             display: none;
             align-items: center;
             justify-content: center;
-            z-index: 100;
+            z-index: 1000;
             padding: 20px;
+            backdrop-filter: blur(4px);
         }
 
         .modal-content {
             background: #fff;
-            border-radius: 20px;
+            border-radius: 24px;
             width: 100%;
-            max-width: 650px;
-            padding: 24px;
+            max-width: 750px;
+            padding: 32px;
             position: relative;
-            max-height: 90vh;
+            max-height: 85vh;
             overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
         }
 
         .close-btn {
-            font-size: 28px;
+            font-size: 32px;
             background: none;
             border: none;
             cursor: pointer;
             color: #94a3b8;
+            line-height: 1;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 10px;
         }
 
         th,
         td {
-            padding: 12px;
+            padding: 14px;
             text-align: left;
             border-bottom: 1px solid var(--border);
             font-size: 14px;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #64748b;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -259,7 +273,7 @@
 <body>
     <main>
         <div class="header-card">
-            <div class="title">🎯 用語マスター</div>
+            <div class="title">🎯 用語マスター Pro</div>
             <div class="control-grid">
                 <select id="chapterSelect"></select>
                 <select id="directionSelect">
@@ -268,6 +282,7 @@
                 </select>
                 <button id="shuffleBtn" class="btn">🔀 シャッフル</button>
                 <button id="showHistoryBtn" class="btn">📜 履歴</button>
+                <button id="showGraphBtn" class="btn">📊 進捗グラフ</button>
             </div>
         </div>
 
@@ -278,7 +293,7 @@
                 </div>
                 <div class="stats-text">
                     <span id="progressLabel">0 / 0</span>
-                    <span id="scoreLabel">正解: 0 / 0</span>
+                    <span id="scoreLabel">正解: 0 / 0 (0%)</span>
                 </div>
             </div>
 
@@ -295,38 +310,54 @@
                 <div id="tabBody" class="tab-content"></div>
             </div>
 
-            <div style="margin-top:auto; padding-top:24px; display:flex; gap:12px;">
+            <div style="margin-top:auto; padding-top:32px; display:flex; gap:16px;">
                 <button id="prevBtn" class="btn" style="flex:1;">← 前へ</button>
                 <button id="nextBtn" class="btn btn-primary" style="flex:2;">次へ進む →</button>
             </div>
         </div>
 
-        <div style="text-align:center; margin-top:24px; display:flex; justify-content:center; gap:16px;">
-            <button id="exportCsvBtn" class="btn">CSV出力</button>
-            <button id="resetStatsBtn" class="btn btn-danger">成績リセット</button>
+        <div style="text-align:center; margin-top:32px; display:flex; justify-content:center; gap:20px;">
+            <button id="exportCsvBtn" class="btn">📤 CSV出力</button>
+            <button id="resetStatsBtn" class="btn btn-danger">⚠️ 成績リセット</button>
         </div>
 
         <div id="historyModal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 style="margin:0">学習履歴</h2>
+                    <h2 style="margin:0">学習履歴 (最新10件)</h2>
                     <button class="close-btn">&times;</button>
                 </div>
-                <table id="historyTable">
+                <table>
                     <thead>
                         <tr>
                             <th>日時</th>
                             <th>章</th>
                             <th>正解数</th>
-                            <th>率</th>
+                            <th>正解率</th>
                         </tr>
                     </thead>
                     <tbody id="historyBody"></tbody>
                 </table>
             </div>
         </div>
+
+        <div id="graphModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 style="margin:0">章別・習得状況</h2>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div style="height:350px;">
+                    <canvas id="rateChart"></canvas>
+                </div>
+                <p style="font-size: 12px; color: #64748b; margin-top: 15px; text-align: center;">
+                    ※一度でも正解した用語を「習得済み」としてカウントしています。
+                </p>
+            </div>
+        </div>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="./data/cards-ch1.js"></script>
     <script src="./data/cards-ch2.js"></script>
     <script src="app.js"></script>
