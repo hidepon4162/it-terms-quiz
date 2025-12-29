@@ -186,7 +186,35 @@
   };
 
   $("resetStatsBtn").onclick = () => { if (confirm("成績をリセットしますか？")) { localStorage.clear(); location.reload(); } };
-  document.querySelectorAll(".close-btn").forEach(b => b.onclick = () => { $(".modal").style.display = "none"; $("graphModal").style.display = "none"; $("historyModal").style.display = "none"; });
+  // 閉じるボタンのイベント登録を確実に修正
+  document.querySelectorAll(".close-btn").forEach((b) => {
+    b.onclick = () => {
+      // 全てのモーダルを非表示にする
+      $("historyModal").style.display = "none";
+      $("graphModal").style.display = "none";
+    };
+  });
+
+  // モーダルの外側（背景）をクリックした時も閉じるようにするとより親切です
+  window.onclick = (event) => {
+    if (event.target == $("historyModal")) $("historyModal").style.display = "none";
+    if (event.target == $("graphModal")) $("graphModal").style.display = "none";
+  };
+
+  // 履歴表示ボタンのイベント登録
+  $("showHistoryBtn").onclick = () => {
+    // ローカルストレージから履歴データを取得（なければ空配列）
+    const hist = JSON.parse(localStorage.getItem(KEYS.HIST) || "[]");
+
+    // 履歴テーブルの本体を作成
+    const html = hist.length > 0
+      ? hist.map(h => `<tr><td>${h.d}</td><td>${h.ch}</td><td>${h.s}</td><td>${h.r}</td></tr>`).join("")
+      : '<tr><td colspan="4" style="text-align:center;">履歴がありません</td></tr>';
+
+    // HTMLを反映させてモーダルを表示
+    $("historyBody").innerHTML = html;
+    $("historyModal").style.display = "flex";
+  };
 
   // --- 7. 起動 ---
   Object.keys(chapters).forEach(k => {
