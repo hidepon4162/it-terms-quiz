@@ -111,12 +111,25 @@
   const parseExtra = (raw) => {
     const res = { point: "", trap: "", example: "", memo: "" };
     if (!raw) return res;
-    raw.split(/(?=ポイント[:：]|ひっかけ[:：]|例[:：]|暗記[:：])/).forEach(p => {
-      if (p.includes("ポイント")) res.point = p.replace(/ポイント[:：]/, "").trim();
-      else if (p.includes("例")) res.example = p.replace(/例[:：]/, "").trim();
-      else if (p.includes("暗記")) res.memo = p.replace(/暗記[:：]/, "").trim();
-      else if (p.includes("ひっかけ")) res.trap = p.replace(/ひっかけ[:：]/, "").trim();
-    });
+
+    // キーワードごとに分割し、それぞれの内容を抽出する
+    // 「ポイント:」から次のキーワード（例：や 暗記：）の手前までを正規表現で取得
+    const extract = (regex) => {
+      const match = raw.match(regex);
+      return match ? match[1].trim() : "";
+    };
+
+    // 各項目を抽出（次のキーワードが出てくるか、文字列の末尾までを取得）
+    res.point = extract(/ポイント[:：]([\s\S]*?)(?=(ひっかけ|例|暗記)[:：]|$)/);
+    res.trap = extract(/ひっかけ[:：]([\s\S]*?)(?=(ポイント|例|暗記)[:：]|$)/);
+    res.example = extract(/例[:：]([\s\S]*?)(?=(ポイント|ひっかけ|暗記)[:：]|$)/);
+    res.memo = extract(/暗記[:：]([\s\S]*?)(?=(ポイント|ひっかけ|例)[:：]|$)/);
+
+    // もし上記で取れなかった場合（古い形式など）のフォールバック
+    if (!res.point && !res.trap && !res.example && !res.memo) {
+      res.point = raw;
+    }
+
     return res;
   };
 
