@@ -323,38 +323,8 @@
             <div id="choices"></div>
 
             <!-- 解説（回答後に出る） -->
-            <div class="explainCard" id="explainCard" hidden>
-                <div class="explainHeader">
-                    <div class="row">
-                        <span class="pill">解説</span>
-                        <span class="muted" id="explainSummary"></span>
-                    </div>
-
-                    <label class="toggle" title="ONにすると追加解説を折りたたみます（試験直前向け）">
-                        <input type="checkbox" id="cramMode" />
-                        試験直前モード（追加解説を折りたたむ）
-                    </label>
-                </div>
-
-                <!-- 基本（定義） -->
-                <div class="tabPanel" id="panelBasic"></div>
-
-                <!-- 追加解説：折りたたみ対象 -->
-                <div class="foldBody" id="extraBody">
-                    <div class="tabs" role="tablist" aria-label="追加解説タブ">
-                        <button class="tabBtn active" data-tab="example" type="button">例</button>
-                        <button class="tabBtn" data-tab="point" type="button">ポイント</button>
-                        <button class="tabBtn" data-tab="memory" type="button">暗記</button>
-                        <button class="tabBtn" data-tab="trap" type="button">ひっかけ</button>
-                    </div>
-
-                    <div class="tabPanel" id="panelExample"></div>
-                    <div class="tabPanel" id="panelPoint" hidden></div>
-                    <div class="tabPanel" id="panelMemory" hidden></div>
-                    <div class="tabPanel" id="panelTrap" hidden></div>
-                </div>
-            </div>
-
+        <div id="explain" style="margin-top: 10px;"></div>
+        
             <!-- 下部操作（常にクリック可能） -->
             <div class="actions">
                 <div class="row">
