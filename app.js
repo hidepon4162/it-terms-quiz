@@ -32,7 +32,7 @@
     let sourceCards = ch.cards;
     if (state.isNgOnly) {
       const stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
-      sourceCards = ch.cards.filter(c => {
+      sourceCards = ch.cards.filter((c) => {
         const s = stats[c.id];
         return !s || s.w > 0 || s.c < 2; // 不正解がある、または正解2回未満
       });
@@ -43,12 +43,20 @@
       }
     }
 
-    state.questions = sourceCards.map(card => {
+    state.questions = sourceCards.map((card) => {
       const isFwd = state.direction === "forward";
       const correct = isFwd ? card.definition : card.term;
-      let dummies = ch.cards.filter(c => c.id !== card.id).map(c => isFwd ? c.definition : c.term);
+      let dummies = ch.cards
+        .filter((c) => c.id !== card.id)
+        .map((c) => (isFwd ? c.definition : c.term));
       dummies = dummies.sort(() => Math.random() - 0.5).slice(0, 3);
-      return { id: card.id, prompt: isFwd ? card.term : card.definition, correct, card, choices: [correct, ...dummies].sort(() => Math.random() - 0.5) };
+      return {
+        id: card.id,
+        prompt: isFwd ? card.term : card.definition,
+        correct,
+        card,
+        choices: [correct, ...dummies].sort(() => Math.random() - 0.5)
+      };
     });
 
     state.idx = 0;
@@ -78,13 +86,18 @@
       b.onclick = () => {
         if (state.answered) return;
         state.answered = true;
-        const isOk = (txt === q.correct);
+
+        const isOk = txt === q.correct;
         state.session.total++;
         if (isOk) state.session.correct++;
+
         b.classList.add(isOk ? "correct" : "wrong");
-        Array.from($("choices").children).forEach(c => {
+
+        Array.from($("choices").children).forEach((c) => {
+          // innerText で番号付きテキストを含むため includes を使う
           if (c.innerText.includes(q.correct)) c.classList.add("correct");
         });
+
         updateStats(q.id, isOk);
         showExplanation(q.card);
       };
@@ -96,16 +109,22 @@
   const showExplanation = (card) => {
     const ex = parseExtra(card.extraExplain);
     $("explainArea").style.display = "block";
-    const updateTab = (key) => { $("tabBody").innerHTML = (ex[key] || "(データなし)").replace(/\n/g, "<br>"); };
+    const updateTab = (key) => {
+      $("tabBody").innerHTML = (ex[key] || "(データなし)").replace(/\n/g, "<br>");
+    };
     const activeBtn = $("explainArea").querySelector(".tab-btn.active");
     updateTab(activeBtn ? activeBtn.dataset.k : "point");
-    $("explainArea").querySelectorAll(".tab-btn").forEach(btn => {
-      btn.onclick = () => {
-        $("explainArea").querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        updateTab(btn.dataset.k);
-      };
-    });
+    $("explainArea")
+      .querySelectorAll(".tab-btn")
+      .forEach((btn) => {
+        btn.onclick = () => {
+          $("explainArea")
+            .querySelectorAll(".tab-btn")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          updateTab(btn.dataset.k);
+        };
+      });
   };
 
   const parseExtra = (raw) => {
@@ -114,18 +133,18 @@
 
     // 戦略：文章の途中にある「例：」に反応しないよう、
     // 「改行の直後にあるキーワード」または「文字列の先頭にあるキーワード」のみを区切りにする
-    const parts = raw.split(/\n(?=ポイント[:：]|ひっかけ[:：]|例[:：]|暗記[:：])|^ポイント[:：]|^ひっかけ[:：]|^例[:：]|^暗記[:：]/);
+    const parts = raw.split(
+      /\n(?=ポイント[:：]|ひっかけ[:：]|例[:：]|暗記[:：])|^ポイント[:：]|^ひっかけ[:：]|^例[:：]|^暗記[:：]/
+    );
 
-    parts.forEach(p => {
+    parts.forEach((p) => {
       const text = p.trim();
-      // 各行がどのキーワードで始まっているかを確認して、中身を格納する
+
       if (text.startsWith("ポイント")) res.point = text.replace(/^ポイント[:：]/, "").trim();
       else if (text.startsWith("ひっかけ")) res.trap = text.replace(/^ひっかけ[:：]/, "").trim();
       else if (text.startsWith("例")) res.example = text.replace(/^例[:：]/, "").trim();
       else if (text.startsWith("暗記")) res.memo = text.replace(/^暗記[:：]/, "").trim();
-
-      // 最初の一行にキーワードがない場合（フォールバック）
-      else if (!res.point && text) res.point = text;
+      else if (!res.point && text) res.point = text; // フォールバック
     });
 
     return res;
@@ -134,8 +153,38 @@
   const updateStats = (id, isOk) => {
     let stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
     stats[id] = stats[id] || { c: 0, w: 0 };
-    if (isOk) stats[id].c++; else stats[id].w++;
+    if (isOk) stats[id].c++;
+    else stats[id].w++;
     localStorage.setItem(KEYS.STATS, JSON.stringify(stats));
+  };
+
+  // 追加：履歴を保存（1セット終了時に1件）
+  const pushHistory = () => {
+    const hist = JSON.parse(localStorage.getItem(KEYS.HIST) || "[]");
+
+    const ch = chapters[state.activeKey];
+    const total = state.session.total;
+    const correct = state.session.correct;
+    const rate = total ? Math.round((correct / total) * 100) : 0;
+
+    const now = new Date();
+    const d =
+      `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+        now.getDate()
+      ).padStart(2, "0")} ` +
+      `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(
+        2,
+        "0"
+      )}`;
+
+    hist.push({
+      d, // 日時
+      ch: ch ? ch.name : state.activeKey, // 章
+      s: `${correct} / ${total}`, // 正解数
+      r: `${rate}%` // 正解率
+    });
+
+    localStorage.setItem(KEYS.HIST, JSON.stringify(hist));
   };
 
   // --- 5. キーボード操作 ---
@@ -151,85 +200,151 @@
   });
 
   // --- 6. 各種ボタン登録 ---
-  $("chapterSelect").onchange = (e) => { state.activeKey = e.target.value; localStorage.setItem(KEYS.CH, e.target.value); initQuiz(); };
-  $("directionSelect").onchange = (e) => { state.direction = e.target.value; localStorage.setItem(KEYS.DIR, e.target.value); initQuiz(); };
-  $("allModeBtn").onclick = () => { state.isNgOnly = false; initQuiz(); };
-  $("weakModeBtn").onclick = () => { state.isNgOnly = true; initQuiz(); };
-  $("shuffleBtn").onclick = () => { state.questions.sort(() => Math.random() - 0.5); render(); };
-  $("nextBtn").onclick = () => { if (state.idx < state.questions.length - 1) { state.idx++; render(); } };
-  $("prevBtn").onclick = () => { if (state.idx > 0) { state.idx--; render(); } };
+  $("chapterSelect").onchange = (e) => {
+    state.activeKey = e.target.value;
+    localStorage.setItem(KEYS.CH, e.target.value);
+    initQuiz();
+  };
+  $("directionSelect").onchange = (e) => {
+    state.direction = e.target.value;
+    localStorage.setItem(KEYS.DIR, e.target.value);
+    initQuiz();
+  };
+  $("allModeBtn").onclick = () => {
+    state.isNgOnly = false;
+    initQuiz();
+  };
+  $("weakModeBtn").onclick = () => {
+    state.isNgOnly = true;
+    initQuiz();
+  };
+  $("shuffleBtn").onclick = () => {
+    state.questions.sort(() => Math.random() - 0.5);
+    render();
+  };
+
+  // 修正：最後まで解いたら履歴保存
+  $("nextBtn").onclick = () => {
+    // 未回答のまま次へ進むと履歴が壊れるのでブロック
+    if (!state.answered) return;
+
+    // 最後なら保存して終了
+    if (state.idx >= state.questions.length - 1) {
+      pushHistory();
+      alert("このセットは終了です。履歴に保存しました。");
+      return;
+    }
+
+    state.idx++;
+    render();
+  };
+
+  $("prevBtn").onclick = () => {
+    if (state.idx > 0) {
+      state.idx--;
+      render();
+    }
+  };
 
   $("showGraphBtn").onclick = () => {
     $("graphModal").style.display = "flex";
     const stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
-    const labels = Object.keys(chapters).map(k => chapters[k].name);
-    const dM = [], dL = [], dB = [], dN = [];
-    Object.keys(chapters).forEach(k => {
-      let m = 0, l = 0, b = 0, n = 0;
-      chapters[k].cards.forEach(c => {
+    const labels = Object.keys(chapters).map((k) => chapters[k].name);
+    const dM = [],
+      dL = [],
+      dB = [],
+      dN = [];
+    Object.keys(chapters).forEach((k) => {
+      let m = 0,
+        l = 0,
+        b = 0,
+        n = 0;
+      chapters[k].cards.forEach((c) => {
         const s = stats[c.id];
-        if (!s || (s.c === 0 && s.w === 0)) n++; else if (s.w > s.c) b++; else if (s.c >= 2) m++; else l++;
+        if (!s || (s.c === 0 && s.w === 0)) n++;
+        else if (s.w > s.c) b++;
+        else if (s.c >= 2) m++;
+        else l++;
       });
-      dM.push(m); dL.push(l); dB.push(b); dN.push(n);
+      dM.push(m);
+      dL.push(l);
+      dB.push(b);
+      dN.push(n);
     });
     if (window.chartInstance) window.chartInstance.destroy();
     window.chartInstance = new Chart($("rateChart").getContext("2d"), {
-      type: 'bar', data: {
-        labels, datasets: [
-          { label: 'マスター', data: dM, backgroundColor: '#3b82f6' },
-          { label: '学習中', data: dL, backgroundColor: '#fbbf24' },
-          { label: '苦手', data: dB, backgroundColor: '#ef4444' },
-          { label: '未着手', data: dN, backgroundColor: '#e2e8f0' }
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label: "マスター", data: dM, backgroundColor: "#3b82f6" },
+          { label: "学習中", data: dL, backgroundColor: "#fbbf24" },
+          { label: "苦手", data: dB, backgroundColor: "#ef4444" },
+          { label: "未着手", data: dN, backgroundColor: "#e2e8f0" }
         ]
-      }, options: { responsive: true, scales: { x: { stacked: true }, y: { stacked: true } } }
+      },
+      options: {
+        responsive: true,
+        scales: { x: { stacked: true }, y: { stacked: true } }
+      }
     });
   };
 
   $("exportCsvBtn").onclick = () => {
     const stats = JSON.parse(localStorage.getItem(KEYS.STATS) || "{}");
     let csv = "\uFEFFid,章,用語,正解数,不正解数\n";
-    Object.keys(chapters).forEach(k => chapters[k].cards.forEach(c => {
-      const s = stats[c.id] || { c: 0, w: 0 };
-      csv += `${c.id},${chapters[k].name},"${c.term}",${s.c},${s.w}\n`;
-    }));
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = `report_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    Object.keys(chapters).forEach((k) =>
+      chapters[k].cards.forEach((c) => {
+        const s = stats[c.id] || { c: 0, w: 0 };
+        csv += `${c.id},${chapters[k].name},"${c.term}",${s.c},${s.w}\n`;
+      })
+    );
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `report_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
   };
 
-  $("resetStatsBtn").onclick = () => { if (confirm("成績をリセットしますか？")) { localStorage.clear(); location.reload(); } };
-  // 閉じるボタンのイベント登録を確実に修正
+  $("resetStatsBtn").onclick = () => {
+    if (confirm("成績をリセットしますか？")) {
+      localStorage.clear();
+      location.reload();
+    }
+  };
+
+  // 閉じるボタン（履歴・グラフ共通）
   document.querySelectorAll(".close-btn").forEach((b) => {
     b.onclick = () => {
-      // 全てのモーダルを非表示にする
       $("historyModal").style.display = "none";
       $("graphModal").style.display = "none";
     };
   });
 
-  // モーダルの外側（背景）をクリックした時も閉じるようにするとより親切です
+  // モーダル背景クリックで閉じる
   window.onclick = (event) => {
     if (event.target == $("historyModal")) $("historyModal").style.display = "none";
     if (event.target == $("graphModal")) $("graphModal").style.display = "none";
   };
 
-  // 履歴表示ボタンのイベント登録
+  // 履歴表示
   $("showHistoryBtn").onclick = () => {
-    // ローカルストレージから履歴データを取得（なければ空配列）
     const hist = JSON.parse(localStorage.getItem(KEYS.HIST) || "[]");
+    const html =
+      hist.length > 0
+        ? hist
+          .map((h) => `<tr><td>${h.d}</td><td>${h.ch}</td><td>${h.s}</td><td>${h.r}</td></tr>`)
+          .join("")
+        : '<tr><td colspan="4" style="text-align:center;">履歴がありません</td></tr>';
 
-    // 履歴テーブルの本体を作成
-    const html = hist.length > 0
-      ? hist.map(h => `<tr><td>${h.d}</td><td>${h.ch}</td><td>${h.s}</td><td>${h.r}</td></tr>`).join("")
-      : '<tr><td colspan="4" style="text-align:center;">履歴がありません</td></tr>';
-
-    // HTMLを反映させてモーダルを表示
     $("historyBody").innerHTML = html;
     $("historyModal").style.display = "flex";
   };
 
   // --- 7. 起動 ---
-  Object.keys(chapters).forEach(k => {
-    const o = document.createElement("option"); o.value = k; o.textContent = chapters[k].name;
+  Object.keys(chapters).forEach((k) => {
+    const o = document.createElement("option");
+    o.value = k;
+    o.textContent = chapters[k].name;
     $("chapterSelect").appendChild(o);
   });
   $("chapterSelect").value = state.activeKey;
