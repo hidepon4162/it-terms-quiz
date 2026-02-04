@@ -230,9 +230,22 @@
       const choices = $("choices").querySelectorAll(".choice");
       if (choices[e.key - 1] && !state.answered) choices[e.key - 1].click();
     }
+
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
       if (state.answered) $("nextBtn").click();
+    }
+
+    // 追加：回答後のみ ←/→ で前後移動
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      // スクロール等の既定動作を抑制（学習テンポ優先）
+      e.preventDefault();
+
+      // ルール：回答後のみ有効
+      if (!state.answered) return;
+
+      if (e.key === "ArrowLeft") $("prevBtn").click();
+      else $("nextBtn").click();
     }
   });
 
