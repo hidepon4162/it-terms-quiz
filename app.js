@@ -3,6 +3,24 @@
 
   const KEYS = { CH: "v_ch", DIR: "v_dir", HIST: "v_hist", STATS: "v_stats" };
 
+  const $ = (id) => document.getElementById(id);
+
+  // --- 数式レンダリング（KaTeX auto-render） ---
+  const renderMath = (rootEl) => {
+    if (!rootEl) return;
+    if (!window.renderMathInElement) return;
+
+    window.renderMathInElement(rootEl, {
+      delimiters: [
+        { left: "$$", right: "$$", display: true },
+        { left: "$", right: "$", display: false },
+        { left: "\\(", right: "\\)", display: false },
+        { left: "\\[", right: "\\]", display: true }
+      ],
+      throwOnError: false
+    });
+  };
+
   // --- 1. データ準備 ---
   const chapters = {};
   for (let i = 1; i <= 21; i++) {
@@ -21,8 +39,6 @@
     answered: false,
     isNgOnly: false
   };
-
-  const $ = (id) => document.getElementById(id);
 
   // --- 2. クイズの初期化 ---
   const initQuiz = () => {
@@ -72,35 +88,51 @@
     if (state.questions.length === 0) return;
 
     const q = state.questions[state.idx];
-    $("question").textContent = q.prompt;
 
+    // 問題文
+    const qEl = $("question");
+    qEl.textContent = q.prompt;
+    renderMath(qEl);
+
+    // 進捗
     const progPercent = ((state.idx + 1) / state.questions.length) * 100;
     $("progressFill").style.width = `${progPercent}%`;
     $("progressLabel").textContent = `${state.idx + 1} / ${state.questions.length}`;
     $("scoreLabel").textContent = `正解: ${state.session.correct} / ${state.session.total}`;
 
+    // 選択肢
     q.choices.forEach((txt, i) => {
       const b = document.createElement("div");
       b.className = "choice";
-      b.innerHTML = `<span class="choice-num">${i + 1}</span>${txt}`;
+
+      // KaTeX描画後にinnerTextが変わるので、正解判定はDOM文字列に依存しない
+      b.dataset.isCorrect = String(txt === q.correct);
+
+      // 番号はHTML、選択肢本文はTextNodeで安全に追加（数式はテキスト内の$...$をKaTeXが処理）
+      b.innerHTML = `<span class="choice-num">${i + 1}</span>`;
+      b.appendChild(document.createTextNode(txt));
+
+      // 選択肢中の数式も描画
+      renderMath(b);
+
       b.onclick = () => {
         if (state.answered) return;
         state.answered = true;
 
-        const isOk = txt === q.correct;
+        const isOk = b.dataset.isCorrect === "true";
         state.session.total++;
         if (isOk) state.session.correct++;
 
         b.classList.add(isOk ? "correct" : "wrong");
 
         Array.from($("choices").children).forEach((c) => {
-          // innerText で番号付きテキストを含むため includes を使う
-          if (c.innerText.includes(q.correct)) c.classList.add("correct");
+          if (c.dataset.isCorrect === "true") c.classList.add("correct");
         });
 
         updateStats(q.id, isOk);
         showExplanation(q.card);
       };
+
       $("choices").appendChild(b);
     });
   };
@@ -109,11 +141,16 @@
   const showExplanation = (card) => {
     const ex = parseExtra(card.extraExplain);
     $("explainArea").style.display = "block";
+
     const updateTab = (key) => {
-      $("tabBody").innerHTML = (ex[key] || "(データなし)").replace(/\n/g, "<br>");
+      const el = $("tabBody");
+      el.innerHTML = (ex[key] || "(データなし)").replace(/\n/g, "<br>");
+      renderMath(el);
     };
+
     const activeBtn = $("explainArea").querySelector(".tab-btn.active");
     updateTab(activeBtn ? activeBtn.dataset.k : "point");
+
     $("explainArea")
       .querySelectorAll(".tab-btn")
       .forEach((btn) => {
